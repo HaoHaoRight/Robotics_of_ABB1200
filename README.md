@@ -1,6 +1,6 @@
 # Robotics_of_ABB1200
 
-![pic1](.\pic\pic1.jpg)
+![pic1](./pic/pic1.jpg)
 
 本md文档大部分由gpt生成
 
