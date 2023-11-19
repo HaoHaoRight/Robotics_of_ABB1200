@@ -1,7 +1,7 @@
 clear all;
 clc;
 close all;
-% 加载机器人模型数据
+% 加载机械臂模型数据
 load('robot_ABB1200.mat');
 robot = SerialLink([ML2 ML3 ML4 ML5 ML6 ML7], 'name', 'ABB1200');
 
