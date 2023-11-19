@@ -32,7 +32,7 @@ hold on;
 title('末端轨迹');
 obstacle.plotObstacle();
 trajectory.plotTrajectory();
-%robot.plot(trajectory.q, 'noshadow', 'nojaxes', 'nojvec', 'nojoints', 'nobase', 'notiles', 'delay', 0.1);
+robot.plot(trajectory.q, 'noshadow', 'nojaxes', 'nojvec', 'nojoints', 'nobase', 'notiles', 'delay', 0.1);
 hold off;
 
 % 绘制关节角度、速度和加速度变化
