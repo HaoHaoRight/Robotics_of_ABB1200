@@ -1,3 +1,4 @@
+% FILEPATH: /c:/Users/a1606/Documents/robot/Robotics_of_ABB1200/Obstacle.m
 classdef Obstacle
     properties
         vertices; % 障碍物顶点
@@ -10,6 +11,11 @@ classdef Obstacle
     
     methods
         function obj = Obstacle(center, length, width, height)
+            % 创建一个障碍物对象
+            %   center: 障碍物的中心点坐标
+            %   length: 障碍物的长度
+            %   width: 障碍物的宽度
+            %   height: 障碍物的高度
             % 计算立方体的顶点
             l = length / 2;
             w = width / 2;
@@ -27,6 +33,8 @@ classdef Obstacle
         end
         
         function minDist = distanceToPoint(obj, point)
+            % 计算障碍物到指定点的最小距离
+            %   point: 指定点的坐标
             % 确定立方体的边界
             minCorner = min(obj.vertices);
             maxCorner = max(obj.vertices);
