@@ -18,7 +18,7 @@ init_ang = [0, 0, 0, 0, 0, 0];
 targ_ang = [pi/2, pi/4, pi/3, pi/6, pi/8, pi/2];
 step = 50;
 [q, qd, qdd] = jtraj(init_ang, targ_ang, step);
-
+target_pose = robot.fkine(targ_ang).T;  % 使用正运动学计算目标位姿
 % 计算末端轨迹
 T = robot.fkine(q);
 nT = T.T;
@@ -27,17 +27,17 @@ nT = T.T;
 trajectory = Trajectory(q, qd, qdd, nT);
 
 % 定义权重并计算初始损失
-weights = [1, 1, 0.1]; % 可以根据需要调整权重
+weights = [1, 1, 0.3]; % 可以根据需要调整权重
 epsilon = 1e-4; % 用于计算梯度的微小扰动
 time_per_step = 0.1; % 时间步长
 [loss_distance_before, loss_smoothness_before, loss_time_before, total_loss_before] = trajectory.calculateLosses(obstacle, time_per_step, weights, epsilon);
 
 % 梯度下降参数
-learning_rate = 0.09; % 学习率
+learning_rate = 0.05; % 学习率
 max_iter = 30; % 最大迭代次数
 
 % 执行梯度下降优化并监控进度
-optimized_trajectory = gradient_descent_optimization(trajectory, robot, obstacle, time_per_step, weights, epsilon, learning_rate, max_iter);
+optimized_trajectory = gradient_descent_optimization(trajectory, robot, obstacle, time_per_step, weights, epsilon, learning_rate, max_iter, targ_ang);
 
 % 计算优化后的损失
 [loss_distance_after, loss_smoothness_after, loss_time_after, total_loss_after] = optimized_trajectory.calculateLosses(obstacle, time_per_step, weights, epsilon);
@@ -69,7 +69,7 @@ obstacle.plotObstacle();
 optimized_trajectory.plotTrajectory();
 robot.plot(optimized_trajectory.q, 'trail', {'g-'}, 'noshadow', 'nojaxes', 'nojvec', 'nojoints', 'nobase', 'notiles', 'delay', 0.1);
 hold off;
-
+S
 function path = rrt_star_planning(start_pose, goal_pose, obstacle, bounds, max_iter, delta_dist)
     % 初始化RRT树
     rrt_tree = [start_pose];
@@ -108,7 +108,7 @@ function path = rrt_star_planning(start_pose, goal_pose, obstacle, bounds, max_i
     return;
 end
 
-function optimized_trajectory = gradient_descent_optimization(trajectory, robot, obstacle, time_per_step, weights, epsilon, learning_rate, max_iter)
+function optimized_trajectory = gradient_descent_optimization(trajectory, robot, obstacle, time_per_step, weights, epsilon, learning_rate, max_iter, targ_ang)
     % 初始化优化后的轨迹
     optimized_trajectory = Trajectory(trajectory.q, trajectory.qd, trajectory.qdd, trajectory.nT);
     
@@ -132,19 +132,19 @@ function optimized_trajectory = gradient_descent_optimization(trajectory, robot,
         T = robot.fkine(optimized_trajectory.q);
         optimized_trajectory.nT = T.T;
 
-        % 检查是否到达目标位置
-        % for step_index = 1:size(optimized_trajectory.q, 1)
-        %     current_pose = T(step_index).T;
-        %     if norm(current_pose(1:3, 4) - target_pose(1:3, 4)) < 10
-        %         % 截断q矩阵到当前步
-        %         optimized_trajectory.q = optimized_trajectory.q(1:step_index, :);
-        %         optimized_trajectory.qd = optimized_trajectory.qd(1:step_index, :);
-        %         optimized_trajectory.qdd = optimized_trajectory.qdd(1:step_index, :);
-        %         optimized_trajectory.nT = optimized_trajectory.nT(:, :, 1:step_index);
-        %         fprintf('已在 %d 步内到达目标位置。\n', step_index);
-        %         return; % 退出优化函数
-        %     end
-        % end
+    % 检查是否接近目标关节角度
+        for step_index = 1:size(optimized_trajectory.q, 1)
+            current_angles = optimized_trajectory.q(step_index, :);
+            if norm(current_angles - targ_ang) < 0.1
+                % 截断q矩阵到当前步
+                optimized_trajectory.q = optimized_trajectory.q(1:step_index, :);
+                optimized_trajectory.qd = optimized_trajectory.qd(1:step_index, :);
+                optimized_trajectory.qdd = optimized_trajectory.qdd(1:step_index, :);
+                optimized_trajectory.nT = optimized_trajectory.nT(:, :, 1:step_index);
+                fprintf('已在第 %d 步接近目标关节角度。\n', step_index);
+                break; 
+            end
+        end
 
         % 如果达到最大迭代次数，提前退出
         if k == max_iter
