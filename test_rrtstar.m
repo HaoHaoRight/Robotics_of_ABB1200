@@ -1,3 +1,5 @@
+
+% 清除工作空间变量、命令窗口和图形窗口
 clear all;
 clc;
 close all;
@@ -69,7 +71,8 @@ obstacle.plotObstacle();
 optimized_trajectory.plotTrajectory();
 robot.plot(optimized_trajectory.q, 'trail', {'g-'}, 'noshadow', 'nojaxes', 'nojvec', 'nojoints', 'nobase', 'notiles', 'delay', 0.1);
 hold off;
-S
+
+% RRT*路径规划函数
 function path = rrt_star_planning(start_pose, goal_pose, obstacle, bounds, max_iter, delta_dist)
     % 初始化RRT树
     rrt_tree = [start_pose];
@@ -108,6 +111,7 @@ function path = rrt_star_planning(start_pose, goal_pose, obstacle, bounds, max_i
     return;
 end
 
+% 梯度下降优化函数
 function optimized_trajectory = gradient_descent_optimization(trajectory, robot, obstacle, time_per_step, weights, epsilon, learning_rate, max_iter, targ_ang)
     % 初始化优化后的轨迹
     optimized_trajectory = Trajectory(trajectory.q, trajectory.qd, trajectory.qdd, trajectory.nT);
@@ -121,7 +125,7 @@ function optimized_trajectory = gradient_descent_optimization(trajectory, robot,
         
         % 判断梯度范数是否小于阈值
         if norm(gradient) < 1e-3
-            fprintf('Optimization Converged\n');
+            fprintf('优化已收敛\n');
             break;
         end
         
@@ -132,7 +136,7 @@ function optimized_trajectory = gradient_descent_optimization(trajectory, robot,
         T = robot.fkine(optimized_trajectory.q);
         optimized_trajectory.nT = T.T;
 
-    % 检查是否接近目标关节角度
+        % 检查是否接近目标关节角度
         for step_index = 1:size(optimized_trajectory.q, 1)
             current_angles = optimized_trajectory.q(step_index, :);
             if norm(current_angles - targ_ang) < 0.1
@@ -148,44 +152,46 @@ function optimized_trajectory = gradient_descent_optimization(trajectory, robot,
 
         % 如果达到最大迭代次数，提前退出
         if k == max_iter
-            fprintf('Reached the maximum number of iterations\n');
+            fprintf('达到最大迭代次数\n');
             break;
         end
     end
 end
 
-
+% 计算梯度函数
 function [loss_distance, loss_smoothness, loss_time, total_loss, gradient] = calculateGradients(trajectory, robot, obstacle, time_per_step, weights, epsilon)
-    % Compute loss and gradient
+    % 计算损失和梯度
     gradient = zeros(size(trajectory.q));
     [loss_distance, loss_smoothness, loss_time, total_loss] = trajectory.calculateLosses(obstacle, time_per_step, weights, epsilon);
     
-    % For each joint angle, compute the loss function's gradient with respect to that angle
+    % 对于每个关节角度，计算损失函数相对于该角度的梯度
     for i = 1:size(trajectory.q, 1)
         for j = 1:size(trajectory.q, 2)
-            % Create a small perturbation
+            % 创建一个小扰动
             dq = zeros(1, size(trajectory.q, 2));
             dq(j) = epsilon;
             
-            % Perturb trajectory at step i, joint j
+            % 在第i步，第j个关节上扰动轨迹
             perturbed_q = trajectory.q;
             perturbed_q(i, :) = perturbed_q(i, :) + dq;
             
-            % Recompute the end-effector trajectory with the perturbed joint angles
+            % 使用扰动后的关节角度重新计算末端执行器轨迹
             T_perturbed = robot.fkine(perturbed_q);
             nT_perturbed = T_perturbed.T;
             
-            % Create a new Trajectory object with the perturbed joint angles and trajectory
+            % 创建一个新的轨迹对象，使用扰动后的关节角度和轨迹
             trajectory_perturbed = Trajectory(perturbed_q, trajectory.qd, trajectory.qdd, nT_perturbed);
             
-            % Calculate new losses with the perturbed trajectory
+            % 使用扰动后的轨迹计算新的损失
             [loss_distance_perturbed, loss_smoothness_perturbed, loss_time_perturbed, total_loss_perturbed] = trajectory_perturbed.calculateLosses(obstacle, time_per_step, weights, epsilon);
             
-            % Estimate the gradient as the change in total loss divided by the perturbation
+            % 估计梯度为总损失变化除以扰动
             gradient(i, j) = (total_loss_perturbed - total_loss) / epsilon;
         end
     end
 end
+
+% 检查在指定步数内是否达到目标位置附近
 function [reached, step_count] = check_reach_goal_in_steps(robot, trajectory, goal_pose, max_steps, position_threshold)
     reached = false;
     step_count = max_steps;
@@ -202,4 +208,3 @@ function [reached, step_count] = check_reach_goal_in_steps(robot, trajectory, go
         end
     end
 end
-
