@@ -31,18 +31,17 @@ trajectory1 = Trajectory(q, qd, qdd, nT);
 trajectory2 = Trajectory(trajectory1.positions, robot);
 
 figure;
-subplot(1, 2, 1);
 hold on;
-title('末端轨迹');
+title('正运动学末端轨迹');
 obstacle.plotObstacle();
 trajectory1.plotTrajectory();
 % 绘制第一个轨迹
  robot.plot(trajectory1.q, 'noshadow', 'nojaxes', 'nojvec', 'nojoints', 'nobase', 'notiles', 'delay', 0.1);
 hold off;
 
-subplot(1, 2, 2);
+figure;
 hold on;
-title('末端轨迹');
+title('逆运动学末端轨迹');
 obstacle.plotObstacle();
 trajectory2.plotTrajectory();
 % 绘制第二个轨迹
