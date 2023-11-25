@@ -73,15 +73,17 @@ robot.plot(optimized_trajectory.q, 'trail', {'g-'}, 'noshadow', 'nojaxes', 'nojv
 hold off;
 
 % RRT*路径规划函数
-function path = rrt_star_planning(start_pose, goal_pose, obstacle, bounds, max_iter, delta_dist)
+function path = rrt_star_planning(start_pose, goal_pose, obstacle)
     % 初始化RRT树
     rrt_tree = [start_pose];
     path = [];
-    delta_q = delta_dist; % 假设delta_q为步长
+    delta_q = 0.1; % 假设delta_q为步长
+
+    max_iter = 1000; % 最大迭代次数
 
     for k = 1:max_iter
         % 随机采样新点
-        q_rand = rand(1, length(start_pose)) .* (bounds(2:2:end) - bounds(1:2:end)) + bounds(1:2:end);
+        q_rand = rand(1, length(start_pose)) .* (goal_pose - start_pose) + start_pose;
 
         % 寻找RRT树中离q_rand最近的节点
         [~, idx] = min(vecnorm((rrt_tree - q_rand), 2, 2));

@@ -2,12 +2,12 @@ clear all
 clc
 
 % 定义机器人模型
-ML2 = Link([pi/2  0.327     0     pi/2      0   ]);
-ML3 = Link([pi/2   0     0.225     0        0   ]);
+ML2 = Link([pi/2  327     0     pi/2      0   ]);
+ML3 = Link([pi/2   0     225     0        0   ]);
 ML4 = Link([0      0      0     pi/2      0   ]);
-ML5 = Link([0     0.100     0    -pi/2      0   ]);
+ML5 = Link([0     100     0    -pi/2      0   ]);
 ML6 = Link([0      0      0     pi/2      0   ]);
-ML7 = Link([0     0.050      0       0       0   ]);
+ML7 = Link([0     050      0       0       0   ]);
 
 % 定义关节角度限制（弧度）
 joint1_angle_max = 230/180*pi;
