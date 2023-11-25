@@ -1,23 +1,22 @@
-% FILEPATH: /c:/Users/a1606/Documents/robot/Robotics_of_ABB1200/Trajectory.m
+
 classdef Trajectory
     properties
         q;      % 关节角度
         qd;     % 关节速度
         qdd;    % 关节加速度
         nT;     % 末端轨迹
-        %   loss_distance: 距离损失
-        %   loss_smoothness: 平滑度损失
-        %   loss_time: 时间损失
-        %   total_loss: 综合损失
-        loss_distance;
-        loss_smoothness; 
-        loss_time;
-        total_loss;
+        loss_distance;      % 距离损失
+        loss_smoothness;    % 平滑度损失
+        loss_time;          % 时间损失
+        total_loss;         % 综合损失
+        time_per_step = 0.1;% 每个步骤的时间
+        weights = [1, 1, 1];% 损失权重
+        epsilon = 1e-4;     % 避免除以零的小量
     end
     
     methods
         function obj = Trajectory(q, qd, qdd, nT)
-            % 构造函数，初始化对象的属性
+            % Trajectory 构造函数，初始化对象的属性
             % 参数:
             %   q: 关节角度
             %   qd: 关节速度
@@ -30,12 +29,12 @@ classdef Trajectory
         end
     
         function plotTrajectory(obj)
-            % 绘制轨迹
+            % plotTrajectory 绘制轨迹
             plot3(squeeze(obj.nT(1, 4, :)), squeeze(obj.nT(2, 4, :)), squeeze(obj.nT(3, 4, :)), 'r-');
         end
 
         function plotJointStates(obj)
-            % 绘制关节角度、速度和加速度变化
+            % plotJointStates 绘制关节角度、速度和加速度变化
             subplot(2, 2, 1);
             plot(obj.q);
             hold on;
@@ -46,17 +45,14 @@ classdef Trajectory
         end
         
         function obj = calculateLosses(obj, obstacle)
-            % 计算损失
-            time_per_step = 0.1;% 每个步骤的时间
-            weights = [1, 1, 1];% 损失权重
-            epsilon = 0.1;% 避免除以零的小量
+            % calculateLosses 计算损失
             % 参数:
             %   obstacle: 障碍物对象
             % 返回值:
             %   loss_dist: 距离损失
             %   loss_smooth: 平滑度损失
-            %   loss_time: 时间损失
-            %   total_loss: 综合损失
+            %   loss_t: 时间损失
+            %   total: 综合损失
             step = size(obj.q, 1);
             distances = zeros(step, 1);
             for i = 1:step
@@ -66,7 +62,7 @@ classdef Trajectory
             end
 
             % 使用势能场方法
-            loss_dist = sum(1 ./ (distances.^2 + epsilon));
+            loss_dist = sum(1 ./ (distances.^2 + obj.epsilon));
 
             % 对于过于接近障碍物的情况，增加额外的惩罚
             close_penalty = sum(distances < 10) * 1;
@@ -79,15 +75,15 @@ classdef Trajectory
             loss_smooth = std_acc_changes;
 
             % 计算轨迹整体运行时间损失
-            total_time = step * time_per_step;
-            loss_time = total_time;
+            total_time = step * obj.time_per_step;
+            loss_t = total_time;
 
             % 计算综合损失
-            total_loss = weights(1) * loss_dist + weights(2) * loss_smooth + weights(3) * loss_time;
+            total = obj.weights(1) * loss_dist + obj.weights(2) * loss_smooth + obj.weights(3) * loss_t;
             obj.loss_distance = loss_dist;
             obj.loss_smoothness = loss_smooth;
-            obj.loss_time = loss_time;
-            obj.total_loss = total_loss;
+            obj.loss_time = loss_t;
+            obj.total_loss = total;
         end
 
     end

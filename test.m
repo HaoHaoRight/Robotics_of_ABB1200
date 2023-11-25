@@ -6,10 +6,10 @@ load('robot_ABB1200.mat');
 robot = SerialLink([ML2 ML3 ML4 ML5 ML6 ML7], 'name', 'ABB1200');
 
 % 定义障碍物
-center = [250 250 250]; % 中心点坐标
-length = 100; % 立方体的长度
-width = 100;  % 立方体的宽度
-height = 100; % 立方体的高度
+center = [0.25 0.25 0.25]; % 中心点坐标
+length = 0.1; % 立方体的长度
+width = 0.1;  % 立方体的宽度
+height = 0.1; % 立方体的高度
 obstacle = Obstacle(center, length, width, height);
 
 % 定义初始和目标关节角度，生成轨迹
@@ -21,6 +21,11 @@ step = 50;
 % 计算末端轨迹
 T = robot.fkine(q);
 nT = T.T;
+% 末端轨迹矩阵 nT 的结构        
+% 末端轨迹矩阵的每一行都是一个 4x4 的矩阵，表示末端执行器的位姿。
+% 旋转部分：一个 3x3 的矩阵，表示末端执行器的方向。
+% 位移部分：一个 3x1 的向量，表示末端执行器的位置。
+% 最后一行：通常是 [0 0 0 1]，用于保持矩阵的数学性质。
 
 % 创建轨迹对象
 trajectory = Trajectory(q, qd, qdd, nT);
@@ -48,14 +53,11 @@ obstacle.plotObstacle();
 % 绘制末端轨迹
 trajectory.plotTrajectory();
 hold off;
-
-% 定义权重并计算损失
-weights = [1, 1, 1];
 % 输入参数：障碍物、时间步长、权重、势能
-[loss_distance, loss_smoothness, loss_time, total_loss] = trajectory.calculateLosses(obstacle, 0.1, weights, 1e-4);
+trajectory = trajectory.calculateLosses(obstacle);
 
 % 输出损失值
-fprintf('距离损失: %f\n', loss_distance);
-fprintf('平滑度损失: %f\n', loss_smoothness);
-fprintf('时间损失: %f\n', loss_time);
-fprintf('总损失: %f\n', total_loss);
+fprintf('距离损失: %f\n', trajectory.loss_distance);
+fprintf('平滑度损失: %f\n', trajectory.loss_smoothness);
+fprintf('时间损失: %f\n', trajectory.loss_time);
+fprintf('总损失: %f\n', trajectory.total_loss);
