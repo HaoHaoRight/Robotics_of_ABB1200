@@ -5,14 +5,7 @@ classdef Trajectory
         qd;     % 关节速度
         qdd;    % 关节加速度
         nT;     % 末端轨迹
-        %   loss_distance: 距离损失
-        %   loss_smoothness: 平滑度损失
-        %   loss_time: 时间损失
-        %   total_loss: 综合损失
         loss_distance;
-        loss_smoothness; 
-        loss_time;
-        total_loss;
     end
     
     methods
@@ -45,16 +38,16 @@ classdef Trajectory
             legend('关节角度', '关节速度', '关节加速度');
         end
         
-        function obj = calculateLosses(obj, obstacle)
+        function [loss_distance, loss_smoothness, loss_time, total_loss] = calculateLosses(obj, obstacle, time_per_step, weights, epsilon)
             % 计算损失
-            time_per_step = 0.1;% 每个步骤的时间
-            weights = [1, 1, 1];% 损失权重
-            epsilon = 0.1;% 避免除以零的小量
             % 参数:
             %   obstacle: 障碍物对象
+            %   time_per_step: 每个步骤的时间
+            %   weights: 损失权重
+            %   epsilon: 避免除以零的小量
             % 返回值:
-            %   loss_dist: 距离损失
-            %   loss_smooth: 平滑度损失
+            %   loss_distance: 距离损失
+            %   loss_smoothness: 平滑度损失
             %   loss_time: 时间损失
             %   total_loss: 综合损失
             step = size(obj.q, 1);
@@ -64,31 +57,26 @@ classdef Trajectory
                 % 使用障碍物类中的距离计算方法
                 distances(i) = obstacle.distanceToPoint(end_effector_pos);
             end
-
+        
             % 使用势能场方法
-            loss_dist = sum(1 ./ (distances.^2 + epsilon));
-
+            loss_distance = sum(1 ./ (distances.^2 + epsilon));
+        
             % 对于过于接近障碍物的情况，增加额外的惩罚
             close_penalty = sum(distances < 10) * 1;
-            loss_dist = loss_dist + close_penalty;
-
+            loss_distance = loss_distance + close_penalty;
+        
             % 计算加速度平滑程度损失
             acceleration_changes = diff(obj.qdd);
             acceleration_changes_vector = acceleration_changes(:);
             std_acc_changes = std(acceleration_changes_vector);
-            loss_smooth = std_acc_changes;
+            loss_smoothness = std_acc_changes;
 
             % 计算轨迹整体运行时间损失
             total_time = step * time_per_step;
             loss_time = total_time;
-
+        
             % 计算综合损失
-            total_loss = weights(1) * loss_dist + weights(2) * loss_smooth + weights(3) * loss_time;
-            obj.loss_distance = loss_dist;
-            obj.loss_smoothness = loss_smooth;
-            obj.loss_time = loss_time;
-            obj.total_loss = total_loss;
+            total_loss = weights(1) * loss_distance + weights(2) * loss_smoothness + weights(3) * loss_time;
         end
-
     end
 end
