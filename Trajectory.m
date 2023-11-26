@@ -9,7 +9,7 @@ classdef Trajectory
         % 将结果重新整理为一个矩阵，其中每一列代表一个时间点的位移
         positions;
         
-        loss_distance;      % 距离损失
+        loss_distance;      % 距离损失.
         loss_smoothness;    % 平滑度损失
         loss_time;          % 时间损失
         total_loss;         % 综合损失
