@@ -72,46 +72,6 @@ optimized_trajectory.plotTrajectory();
 robot.plot(optimized_trajectory.q, 'trail', {'g-'}, 'noshadow', 'nojaxes', 'nojvec', 'nojoints', 'nobase', 'notiles', 'delay', 0.1);
 hold off;
 
-% RRT*路径规划函数
-function path = rrt_star_planning(start_pose, goal_pose, obstacle)
-    % 初始化RRT树
-    rrt_tree = [start_pose];
-    path = [];
-    delta_q = 0.1; % 假设delta_q为步长
-
-    max_iter = 1000; % 最大迭代次数
-
-    for k = 1:max_iter
-        % 随机采样新点
-        q_rand = rand(1, length(start_pose)) .* (goal_pose - start_pose) + start_pose;
-
-        % 寻找RRT树中离q_rand最近的节点
-        [~, idx] = min(vecnorm((rrt_tree - q_rand), 2, 2));
-        q_near = rrt_tree(idx, :);
-
-        % 向q_rand方向移动一个步长以生成新节点q_new
-        dir = (q_rand - q_near) / norm(q_rand - q_near);
-        q_new = q_near + delta_q * dir;
-
-        % 检查q_new是否与障碍物发生碰撞
-        if obstacle.distanceToPoint(q_new) > delta_q
-            % 将新节点添加到RRT树中
-            rrt_tree = [rrt_tree; q_new];
-        end
-
-        % 检查是否达到目标附近
-        if norm(q_new - goal_pose) < delta_q
-            path = [rrt_tree; goal_pose];
-            break;
-        end
-    end
-
-    if isempty(path)
-        warning('RRT*未能在迭代次数内找到有效路径。');
-    end
-
-    return;
-end
 
 % 梯度下降优化函数
 function optimized_trajectory = gradient_descent_optimization(trajectory, robot, obstacle, time_per_step, weights, epsilon, learning_rate, max_iter, targ_ang)

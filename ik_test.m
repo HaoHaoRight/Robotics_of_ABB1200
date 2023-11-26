@@ -5,10 +5,10 @@ close all;
 load('robot_ABB1200.mat');
 robot = SerialLink([ML2 ML3 ML4 ML5 ML6 ML7], 'name', 'ABB1200');
 % 定义障碍物
-center = [0.25 0.25 0.25]; % 中心点坐标
-length = 0.1; % 立方体的长度
-width = 0.1;  % 立方体的宽度
-height = 0.1; % 立方体的高度
+center = [250 250 250]; % 中心点坐标
+length = 100; % 立方体的长度
+width = 100;  % 立方体的宽度
+height = 100; % 立方体的高度
 obstacle = Obstacle(center, length, width, height);
 
 % 定义一组测试的关节角度
@@ -36,7 +36,7 @@ title('正运动学末端轨迹');
 obstacle.plotObstacle();
 trajectory1.plotTrajectory();
 % 绘制第一个轨迹
- robot.plot(trajectory1.q, 'noshadow', 'nojaxes', 'nojvec', 'nojoints', 'nobase', 'notiles', 'delay', 0.1);
+%robot.plot(trajectory1.q, 'noshadow', 'nojaxes', 'nojvec', 'nojoints', 'nobase', 'notiles', 'delay', 0.1);
 hold off;
 
 figure;
@@ -45,8 +45,22 @@ title('逆运动学末端轨迹');
 obstacle.plotObstacle();
 trajectory2.plotTrajectory();
 % 绘制第二个轨迹
-robot.plot(trajectory2.q, 'noshadow', 'nojaxes', 'nojvec', 'nojoints', 'nobase', 'notiles', 'delay', 0.1);
+%robot.plot(trajectory2.q, 'noshadow', 'nojaxes', 'nojvec', 'nojoints', 'nobase', 'notiles', 'delay', 0.1);
 hold off;
+% rrt*函数测试
+start_point = [225;-1.83697019872103e-14;177];
+goal_point = [9.56708580912675;296.022756199211;539.942857714129];
+trajectory3 = rrt_star_planning(start_point, goal_point, obstacle, robot);
+
+figure;
+hold on;
+title('rrt*末端轨迹');
+obstacle.plotObstacle();
+trajectory3.plotTrajectory();
+% 绘制第三个轨迹
+%robot.plot(trajectory3.q, 'noshadow', 'nojaxes', 'nojvec', 'nojoints', 'nobase', 'notiles', 'delay', 0.1);
+hold off;
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % clear all;
 % clc;

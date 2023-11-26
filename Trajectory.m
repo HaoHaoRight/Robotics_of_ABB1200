@@ -8,7 +8,7 @@ classdef Trajectory
         % 提取所有位移部分
         % 将结果重新整理为一个矩阵，其中每一列代表一个时间点的位移
         positions;
-        
+        costs;              % 当前节点损失
         loss_distance;      % 距离损失
         loss_smoothness;    % 平滑度损失
         loss_time;          % 时间损失
@@ -40,6 +40,8 @@ classdef Trajectory
                 elseif nargin == 2
                     obj.positions = x1;
                     obj = computeInverseKinematics(obj, x2);
+                elseif nargin == 1
+                    obj.positions = x1;
                 else
                     error('Invalid number of input arguments');
                 end
