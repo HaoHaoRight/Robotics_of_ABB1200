@@ -20,7 +20,7 @@ classdef BIT_star
             % 输入：x_root-根节点
             %      X_goal-机器人的目标位置
             %      X_t-机器人的障碍物
-            obj.x_root = Node(start, []);
+            obj.x_root = start;
             obj.X_goal = goal;
             obj.obstacle = obstacle;
 
