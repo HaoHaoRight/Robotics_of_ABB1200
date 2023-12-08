@@ -18,8 +18,11 @@ classdef BIT_star
    % 这可能会增大内存开销
 
    % 我还没有完全理解重连操作rewire，待理解
-
+   % 为避免混肴，将要考虑把V定义为matrix，E定义为cell
+   % 这样可以使x和v同源，而v则是树中的顶点
+   % 因为V.cost多余了，点的成本完全可以单独计算
    % 不确定isempty(Q.V)是否正确
+
     properties
         Tree;% 树是一个有向无环图(DAG)，表示为 T≡(V,E)
         Q;% 优先队列
