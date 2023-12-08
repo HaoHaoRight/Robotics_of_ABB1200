@@ -9,7 +9,9 @@ classdef BIT_star
         obstacle;
         x_root;% 根节点
         X_goal;% 机器人的目标位置
-        X_flags;
+        X_flags;% X_new, V_exp, V_rewire, V_sol, c_sol
+        % [III]
+        % X_new 
         X_ncon;% 
 
     end
@@ -28,14 +30,14 @@ classdef BIT_star
             % 树是一个有向无环图，表示为 T≡(V,E)
             % V是节点集合，E是边集合
             % 树储存的节点是Node类的对象
-            Tree = struct('V',{},'E',{});
-            Tree.V = {x_r};% 初始树只有一个节点，即根节点
-            Tree.E = struct('father',{},'cost',{});% 边的结构体
+            obj.Tree = struct('V',{},'E',{});
+            obj.Tree.V = struct('status',{x_r},'cost',{});% 初始树只有一个节点，即根节点
+            obj.Tree.E = struct('father',{},'cost',{});% 边的结构体
 
             %% 伪代码第二行
-            Q = struct('V',{},'E',{});% 优先队列
-            Q.V = Tree.V;
-            Q.E = struct('father',{},'cost',{});% 边的结构体
+            obj.Q = struct('V',{},'E',{});% 优先队列(queue)
+            obj.Q.V = struct('status',{Tree.V},'cost',{});% vertex queue
+            obj.Q.E = struct('father',{},'cost',{});% edge queue
 
             %% 伪代码第三行
             obj.X_flags = struct('X_new',{},'V_exp',{},'V_rewire',{},'V_sol',{},'c_sol',{});
@@ -43,12 +45,31 @@ classdef BIT_star
             obj.X_flags.X_new = obj.X_ncon;
             obj.X_flags.c_sol = inf;
         end
-        
-        function ExpVertex(Tree, X_ncon, X_flags)
+
+        function [Q, X_flags] = ExpVertex(Tree, Q, X_ncon, X_flags)
+            % [III.B] Algorithm 3
+            % ExpVertex reemoves the lowest cost vertex from the queue Q.V and adds edges Q.E 
+            % for every neighbor that might be part of the optimal path.
+            % 输入：Tree-树
+            %      Q-优先队列
+            %      X_ncon-尚未连接到树中的节点
+            %      X_flags- X_new, V_exp, V_rewire, V_sol, c_sol
+
+            v_best = PopBest(Q, 'V');
+            % Make edges to unconnected samples
+            if ~ismember(v_best, X_flags.V_exp)
+                X_flags.V_exp = {X_flags.V_exp, v_best};
+                X_near = findNear(v_best, X_ncon);
+            else % v_best has been expanded before
+                X_near = findNear(v_best, intersect(X_flags.X_new, X_ncon));
+                X_near = {X_near, v_best};
+            end
+
             
         end
 
-        function randSample(obj, m)
+        function X_rand = randSample(obj, m)
+            % [II.B Definiton 6]
             % 在X_free与椭球空间(informed set)的交集中随机采样。
             % X_free空间为所有不与障碍物相交的点的集合。
             % X_rand <- randSample(m)
@@ -61,6 +82,7 @@ classdef BIT_star
         end
 
         function X_near = findNear(obj, x, X_search)
+            % [II.B Definiton 7]
             % 在X_near空间中寻找与X_rand最近的点。
             % 找到X_serach内与点x欧几里得距离小于ρ的点。
             % X_near <- near(x, X_search)
@@ -76,15 +98,8 @@ classdef BIT_star
             end
         end
 
-        function distance = dist(x1, x2)
-            % 计算两点间的欧几里得距离。
-            % 输入：x1-点1
-            %      x2-点2
-            % 输出：distance-两点间的欧几里得距离
-            distance = sqrt((x1(1)-x2(1))^2+(x1(2)-x2(2))^2+(x1(3)-x2(3))^2);
-        end
-
         function X_sol = Solution(obj, x)
+            % [II.B Definiton 8]
             % Solution - 找到从根节点到节点 x 的路径。
             % 输入：x - 目标节点的坐标
             % 输出：X_sol - 从根节点到节点 x 的路径（节点坐标序列）
@@ -118,6 +133,29 @@ classdef BIT_star
                 current_node = father_node;
             end
         end
+        function x = PopBest(Q, name)
+            % [II.B Definiton 12]
+            % Finds the element with the lowest cost in the queue Q_i and removes it.
+            % And returns the element.
+            % PopBest - 从优先队列中弹出最优节点。
+            % 输入：Q_i - 优先队列Q_E或Q_V
+            % 输出：x - 最优节点('status', 'cost')
+            if(name == 'V')
+                [~, index] = min(Q.V.cost);
+                x = Q.V(index);
+                Q.V(index) = [];
+            end
+
+        end
+        function distance = dist(x1, x2)
+            % 计算两点间的欧几里得距离。
+            % 输入：x1-点1
+            %      x2-点2
+            % 输出：distance-两点间的欧几里得距离
+            distance = sqrt((x1(1)-x2(1))^2+(x1(2)-x2(2))^2+(x1(3)-x2(3))^2);
+        end
+
+
 
     end
 end
