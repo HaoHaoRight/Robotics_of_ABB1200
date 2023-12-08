@@ -1,23 +1,40 @@
 classdef BIT_star
    % 本代码由 https://arxiv.org/pdf/2302.11670.pdf 的伪代码部分改写而来
-   % 坐标矩阵:[x;
-   %          y;
-   %          z]
+   % 英文部分主要取自原文，[]内为原文章节索引
+   % 重要区别：x是点坐标，v是顶点(vetex)包含状态status和代价cost
+   % 大写是集合，小写是元素
+   %
+   %% 【数据结构】
+   % 坐标矩阵:x = [x;y;z]列向量
+   % 顶点(vetex)结构体：v = struct('status',x,'cost',cost)，其中status是点坐标，cost是顶点代价
+   % 边(edge)结构体：e = struct('father',v,'cost',cost)，其中father是父节点，cost是边代价
+   % 为了保持代码简洁性，约定集合形如：
+   % Tree.V = {
+   %            struct('status',[],'cost',[]),
+   %            struct('status',[],'cost',[]),
+   %            ...
+   %          } 
+   % 每条边作为独立的实体，以Tree.V(index).Name的形式访问数据
+   % 这可能会增大内存开销
     properties
-        Tree;% 树是一个有向无环图，表示为 T≡(V,E)
+        Tree;% 树是一个有向无环图(DAG)，表示为 T≡(V,E)
         Q;% 优先队列
         obstacle;
         x_root;% 根节点
         X_goal;% 机器人的目标位置
         X_flags;% X_new, V_exp, V_rewire, V_sol, c_sol
-        % [III]
-        % X_new 
-        X_ncon;% 
+        X_ncon;% 尚未连接到树中的节点
 
+        % [III] X_flags的定义
+        % X_ncon ⊂ X | 是一个已被采样，但没有连接到搜索树的样本 集合。 is the set of all samples that are not connected to the search tree.
+        % V_sol = V ∩ X_t | 包含已经到达目标区域的顶点，是V和X_t的 交集，。 is the set of vertices in V taht are also in target set X_t.
+        % X_new ⊂ X_ncon | 包含最新的，还未评估是否加入搜索树的点，是最近一批样本的 集合。 is the set of samples that are from the most recent batch of samples.
+        % c_sol = min{c(v), v ∈ V_sol} | 是到达目标区域的当前最小代价。 is the minimum cost of a path to the target set.
     end
     
     methods
         function obj = BIT_star(start, goal, X_t, obstacle)
+            % Algorithm 1
             % 构造函数，初始化算法
             % 输入：x_root-根节点
             %      X_goal-机器人的目标位置
@@ -30,17 +47,17 @@ classdef BIT_star
             % 树是一个有向无环图，表示为 T≡(V,E)
             % V是节点集合，E是边集合
             % 树储存的节点是Node类的对象
-            obj.Tree = struct('V',{},'E',{});
-            obj.Tree.V = struct('status',{x_r},'cost',{});% 初始树只有一个节点，即根节点
-            obj.Tree.E = struct('father',{},'cost',{});% 边的结构体
+            obj.Tree = {struct('V',[],'E',[])};
+            obj.Tree.V = {struct('status',x_r,'cost',[])};% 初始树只有一个节点，即根节点
+            obj.Tree.E = {struct('father',[],'cost',[])};% 边的结构体
 
             %% 伪代码第二行
-            obj.Q = struct('V',{},'E',{});% 优先队列(queue)
-            obj.Q.V = struct('status',{Tree.V},'cost',{});% vertex queue
-            obj.Q.E = struct('father',{},'cost',{});% edge queue
+            obj.Q = {struct('V',[],'E',[])};% 优先队列(queue)
+            obj.Q.V = {struct('status',Tree.V,'cost',[])};% vertex queue
+            obj.Q.E = {struct('father',[],'cost',[])};% edge queue
 
             %% 伪代码第三行
-            obj.X_flags = struct('X_new',{},'V_exp',{},'V_rewire',{},'V_sol',{},'c_sol',{});
+            obj.X_flags = {struct('X_new',[],'V_exp',[],'V_rewire',[],'V_sol',[],'c_sol',[])};
             obj.X_ncon = X_goal;% 尚未连接到树中的节点
             obj.X_flags.X_new = obj.X_ncon;
             obj.X_flags.c_sol = inf;
@@ -48,7 +65,7 @@ classdef BIT_star
 
         function [Q, X_flags] = ExpVertex(Tree, Q, X_ncon, X_flags)
             % [III.B] Algorithm 3
-            % ExpVertex reemoves the lowest cost vertex from the queue Q.V and adds edges Q.E 
+            % ExpVertex removes the lowest cost vertex from the queue Q.V and adds edges Q.E 
             % for every neighbor that might be part of the optimal path.
             % 输入：Tree-树
             %      Q-优先队列
@@ -57,15 +74,23 @@ classdef BIT_star
 
             v_best = PopBest(Q, 'V');
             % Make edges to unconnected samples
+            
             if ~ismember(v_best, X_flags.V_exp)
                 X_flags.V_exp = {X_flags.V_exp, v_best};
                 X_near = findNear(v_best, X_ncon);
             else % v_best has been expanded before
                 X_near = findNear(v_best, intersect(X_flags.X_new, X_ncon));
-                X_near = {X_near, v_best};
             end
 
-            
+            % Q.E <-+ {(v_best, x), x ∈ X_near|g(v_best)+c(v_best,x)+h(x)<c_sol} if v_best not been rewired before
+            % (v_best, x)表示一条从v_best到x的边  
+            for i = 1:length(X_near)
+                x = X_near(i);
+                cost = g(v_best)+c(v_best,x)+h(x);%% 代写完整的cost函数
+                if cost < X_flags.c_sol
+                    Q.E = {Q.E, struct('father',v_best,'cost',cost)};% adds edges
+                end
+            end
         end
 
         function X_rand = randSample(obj, m)
