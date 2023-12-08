@@ -30,13 +30,12 @@ classdef BIT_star
             % 树储存的节点是Node类的对象
             Tree = struct('V',{},'E',{});
             Tree.V = {x_r};% 初始树只有一个节点，即根节点
-            Tree.V = {};
-            Tree.E = struct('father',{},'child',{}, 'cost',{});% 边的结构体
+            Tree.E = struct('father',{},'cost',{});% 边的结构体
 
             %% 伪代码第二行
             Q = struct('V',{},'E',{});% 优先队列
             Q.V = Tree.V;
-            Q.E = struct('father',{},'child',{}, 'cost',{});% 边的结构体
+            Q.E = struct('father',{},'cost',{});% 边的结构体
 
             %% 伪代码第三行
             obj.X_flags = struct('X_new',{},'V_exp',{},'V_rewire',{},'V_sol',{},'c_sol',{});
@@ -44,9 +43,11 @@ classdef BIT_star
             obj.X_flags.X_new = obj.X_ncon;
             obj.X_flags.c_sol = inf;
         end
+        
         function ExpVertex(Tree, X_ncon, X_flags)
             
         end
+
         function randSample(obj, m)
             % 在X_free与椭球空间(informed set)的交集中随机采样。
             % X_free空间为所有不与障碍物相交的点的集合。
@@ -58,6 +59,7 @@ classdef BIT_star
             % 椭球的长轴是当前最优路径长度c_best
             c_best = obj.X_flags.c_sol;
         end
+
         function X_near = findNear(obj, x, X_search)
             % 在X_near空间中寻找与X_rand最近的点。
             % 找到X_serach内与点x欧几里得距离小于ρ的点。
@@ -73,6 +75,7 @@ classdef BIT_star
                 end
             end
         end
+
         function distance = dist(x1, x2)
             % 计算两点间的欧几里得距离。
             % 输入：x1-点1
@@ -80,36 +83,41 @@ classdef BIT_star
             % 输出：distance-两点间的欧几里得距离
             distance = sqrt((x1(1)-x2(1))^2+(x1(2)-x2(2))^2+(x1(3)-x2(3))^2);
         end
-        function X_sol = Solution(obj, node)
-            % Solution - 找到从根节点到节点 node 的路径。
-            % 输入：node - 目标节点在树中的索引或标识符
-            % 输出：X_sol - 从根节点到节点 node 的路径（节点序列）
-            
+
+        function X_sol = Solution(obj, x)
+            % Solution - 找到从根节点到节点 x 的路径。
+            % 输入：x - 目标节点的坐标
+            % 输出：X_sol - 从根节点到节点 x 的路径（节点坐标序列）
+        
             % 初始化路径为一个空的单元数组
             X_sol = {};
-            
+        
             % 当前节点初始化为目标节点 x
-            current_node = node;
-            
+            current_node = x;
+        
             % 沿树回溯到根节点
             while ~isempty(current_node)
                 % 将当前节点添加到路径数组的开始位置
                 X_sol = [{current_node}, X_sol];
-                
+        
                 % 如果当前节点是根节点，则停止回溯
                 if isequal(current_node, obj.x_root)
                     break;
                 end
-                
-                % 获取当前节点的父节点
-                parent_index = find(arrayfun(@(n) ismember(current_node, n.children), obj.Tree.V));
-                if isempty(parent_index)
-                    error('Parent node not found. The tree structure might be corrupted.');
+        
+                % 在 Tree.V 中找到 current_node 的索引
+                node_index = find(arrayfun(@(v) isequal(v, current_node), obj.Tree.V));
+                if isempty(node_index)
+                    error('node not found in Tree.V');
                 end
-                
-                % 更新当前节点为父节点，继续回溯
-                current_node = obj.Tree.V(parent_index).node;
+        
+                % 使用 node_index 在 Tree.E 中找到对应的父节点
+                father_node = obj.Tree.E(node_index).father;
+        
+                % 更新当前节点为父节点的坐标，继续回溯
+                current_node = father_node;
             end
         end
+
     end
 end
