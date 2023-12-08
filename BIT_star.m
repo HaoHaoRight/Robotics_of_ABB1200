@@ -19,6 +19,7 @@ classdef BIT_star
 
    % 我还没有完全理解重连操作rewire，待理解
 
+   % 不确定isempty(Q.V)是否正确
     properties
         Tree;% 树是一个有向无环图(DAG)，表示为 T≡(V,E)
         Q;% 优先队列
@@ -37,17 +38,17 @@ classdef BIT_star
     end
     
     methods
-        function obj = BIT_star(start, goal, X_t, obstacle)
+        function X_sol = BIT_star(start, goal, X_t, obstacle)
             % Algorithm 1
             % 构造函数，初始化算法
             % 输入：x_root-根节点
             %      X_goal-机器人的目标位置
-            %      X_t-机器人的障碍物
+            %      X_t-机器人的目标区域
             obj.x_root = start;
             obj.X_goal = goal;
             obj.obstacle = obstacle;
 
-            %% 伪代码第一行
+            % Line 1
             % 树是一个有向无环图，表示为 T≡(V,E)
             % V是节点集合，E是边集合
             % 树储存的节点是Node类的对象
@@ -55,16 +56,48 @@ classdef BIT_star
             obj.Tree.V = {struct('status',x_root,'cost',[])};% 初始树只有一个节点，即根节点
             obj.Tree.E = {struct('father',[],'cost',[])};% 边的结构体
 
-            %% 伪代码第二行
+            %Line 2
             obj.Q = {struct('V',[],'E',[])};% 优先队列(queue)
             obj.Q.V = {struct('status',Tree.V,'cost',[])};% vertex queue
             obj.Q.E = {struct('father',[],'cost',[])};% edge queue
 
-            %% 伪代码第三行
+            % Line 3-6
             obj.X_flags = {struct('X_new',{},'V_exp',{},'V_rewire',{},'V_sol',{},'c_sol',{})};
             obj.X_ncon = X_goal;% 尚未连接到树中的节点
             obj.X_flags.X_new = obj.X_ncon;
             obj.X_flags.c_sol = inf;
+            obj.X_flags.V_sol = obj.X_goal;
+
+            % Line 5
+            if isempty(obj.X_flags.V_sol)
+                obj.X_flags.c_sol = inf;
+            else
+                % c_sol <- minv∈V_sol gT(v) 待优化
+                gTV = {};
+                for i = 1:length(obj.X_flags.V_sol)
+                    gTV = {gTV, gT(obj.X_flags.V_sol)};%gT待实现
+                end
+                obj.X_flags.c_sol = min(gTV);%gT待实现
+            end
+
+            % Line 7-17
+            while stop
+                % Line 8
+                % Prune sub-optimal nodes
+                if xor(isempty(Q.V), isempty(Q.E)) % End of batch
+                    
+
+                % Line 9
+                % Process best vertex available
+                elseif BestVertex(Q, 'V') <= BestVertex(Q, 'E') 
+                    Q, X_flags = ExpVertex(Tree, Q, X_ncon, X_flags);
+
+                %Line 15
+                % Process best edge available
+                else
+                    Tree, Q, X_ncon, X_flags = ExpEdge(Tree, Q, X_ncon, X_flags);% 待实现
+                end
+            end
         end
 
         function [Q, X_flags] = ExpVertex(Tree, Q, X_ncon, X_flags)
