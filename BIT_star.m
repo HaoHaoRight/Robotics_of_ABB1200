@@ -1,17 +1,16 @@
 classdef BIT_star
    % 本代码由 https://arxiv.org/pdf/2302.11670.pdf 的伪代码部分改写而来
    % 英文部分主要取自原文，[]内为原文章节索引
-   % 重要区别：x是点坐标，v是顶点(vertex)包含状态status和代价cost
+   % 重要区别：x是点坐标，v是顶点(vertex)
    % 大写是集合，小写是元素
    
    %% 【数据结构】
    % 坐标矩阵:x = [x;y;z]列向量
-   % 顶点(vertex)结构体：v = struct('status',x,'cost',cost)，其中status是点坐标，cost是顶点代价
    % 边(edge)结构体：e = struct('father',v,'cost',cost)，其中father是父节点，cost是边代价
    % 为了保持代码简洁性，约定集合形如：
-   % Tree.V = {
-   %            struct('status',[],'cost',[]),
-   %            struct('status',[],'cost',[]),
+   % Tree.E = {
+   %            struct('father',[],'cost',[]),
+   %            struct('father',[],'cost',[]),
    %            ...
    %          } 
    % 每条边作为独立的实体，以Tree.V(index).Name的形式访问数据
@@ -56,12 +55,12 @@ classdef BIT_star
             % V是节点集合，E是边集合
             % 树储存的节点是Node类的对象
             obj.Tree = {struct('V',[],'E',[])};
-            obj.Tree.V = {struct('status',x_root,'cost',[])};% 初始树只有一个节点，即根节点
+            obj.Tree.V = {x_root};% 初始树只有一个节点，即根节点
             obj.Tree.E = {struct('father',[],'cost',[])};% 边的结构体
 
             %Line 2
             obj.Q = {struct('V',[],'E',[])};% 优先队列(queue)
-            obj.Q.V = {struct('status',Tree.V,'cost',[])};% vertex queue
+            obj.Q.V = {Tree.V};% vertex queue
             obj.Q.E = {struct('father',[],'cost',[])};% edge queue
 
             % Line 3-6
@@ -146,8 +145,7 @@ classdef BIT_star
 
                 % Line 9
                 X_flags.V_rewire = {X_flags.V_rewire, v_best};
-                X_search = arrayfun(@(x) x.status, Tree.V, 'UniformOutput', false);% 提取Tree.V中所有节点的坐标（待验证）
-                X_search = cell2mat(X_search); % X_search is a matrix
+                X_search = cell2mat(Tree.V); % X_search is a matrix
 
                 % Line 10
                 X_flags.V_near = findNear(v_best, X_search);% Finds all vertes in the serach tree that are near v_best
@@ -187,7 +185,7 @@ classdef BIT_star
             %      X_search-搜索空间
             r = 0.1;
             X_near = [];
-            x = v.status;
+            x = v;
             distance = sqrt((x(1)-X_search(:,2)).^2+(x(2)-X_search(:,2)).^2+(x(3)-X_search(:,3)).^2);
             for i = 1:length(distance)
                 if distance(i) < r
@@ -237,9 +235,9 @@ classdef BIT_star
             % And returns the element.
             % PopBest - 从优先队列中弹出最优节点。
             % 输入：Q_i - 优先队列Q_E或Q_V
-            % 输出：x - 最优节点('status', 'cost')
+            % 输出：x - 最优节点
             if(name == 'V')
-                [~, index] = min(Q.V.cost);
+                [~, index] = min(cost(Q.V));
                 x = Q.V(index);
                 Q.V(index) = [];
             end
