@@ -3,7 +3,7 @@ classdef BIT_star
    % 英文部分主要取自原文，[]内为原文章节索引
    % 重要区别：x是点坐标，v是顶点(vertex)包含状态status和代价cost
    % 大写是集合，小写是元素
-   %
+   
    %% 【数据结构】
    % 坐标矩阵:x = [x;y;z]列向量
    % 顶点(vertex)结构体：v = struct('status',x,'cost',cost)，其中status是点坐标，cost是顶点代价
