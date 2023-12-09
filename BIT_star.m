@@ -126,11 +126,11 @@ classdef BIT_star
             end
 
             % Line 7
-            % Q.E <-+ {(v_best, x), x ∈ X_near|g(v_best)+c(v_best,x)+h(x)<c_sol} if v_best not been rewired before
+            % Q.E <-+ {(v_best, x), x ∈ X_near|g_(v_best)+c_(v_best,x)+h_(x)<c_sol} if v_best not been rewired before
             % (v_best, x)表示一条从v_best到x的边  
             for i = 1:length(X_near)
                 x = X_near(i);
-                cost = g(v_best)+c(v_best,x)+h(x);%% 代写完整的cost函数
+                cost = g_(v_best)+c_(v_best,x)+h_(x);%% 代写完整的cost函数
                 if cost < X_flags.c_sol
                     Q.E = {Q.E, struct('father',v_best,'cost',cost)};% adds edges
                 end
@@ -154,7 +154,7 @@ classdef BIT_star
 
                 % Line 11
                 % Adds all edges (v_best, V_near) to the queue Q.E that are not already part of the tree and might be part of the optimal path.
-                % Q.E <-+ {(v_best, w), w ∈ V_near|(v_best,w)∈E and g(v_best)+c(v_best,w)<gT(w),g(v_best)+c(v_best,w)+h(w)<c_sol}
+                % Q.E <-+ {(v_best, w), w ∈ V_near|(v_best,w)∈E and g_(v_best)+c_(v_best,w)<gT(w),g_(v_best)+c_(v_best,w)+h_(w)<c_sol}
                 for i = 1:length(X_flags.V_near)
                     w = X_flags.V_near(i);
                     % 代价函数待实现
@@ -173,7 +173,7 @@ classdef BIT_star
             % 输入：m-采样点个数
 
             % 椭球的短轴是x_root到X_goal的距离
-            c_min = dist(obj.x_root, obj.X_goal);
+            c_min = obj.dist(obj.x_root, obj.X_goal);
             % 椭球的长轴是当前最优路径长度c_best
             c_best = obj.X_flags.c_sol;
         end
@@ -252,8 +252,6 @@ classdef BIT_star
             % 输出：distance-两点间的欧几里得距离
             distance = sqrt((x1(1)-x2(1))^2+(x1(2)-x2(2))^2+(x1(3)-x2(3))^2);
         end
-
-
 
     end
 end
