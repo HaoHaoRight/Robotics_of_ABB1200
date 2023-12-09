@@ -16,6 +16,7 @@ ML4 = Link([0   0      0.042     -pi/2       0   ]);
 ML5 = Link([0   0.451     0       pi/2       0   ]);
 ML6 = Link([0   0         0      -pi/2       0   ]);
 ML7 = Link([0   0.082     0       0          0   ]);
+
 % 定义关节角度限制（弧度）
 joint1_angle_max = 170/180*pi;
 joint1_angle_min = -170/180*pi;
