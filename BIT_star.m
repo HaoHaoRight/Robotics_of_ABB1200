@@ -201,7 +201,77 @@ classdef BIT_star
                 end
             end
         end
+        function [Tree, Q, X_ncon, X_flags] = ExpEdge(Tree, Q, X_ncon, X_flags)
+            % [III.B] Algorithm 4
+            % ExpEdge removes the lowest cost edge from the queue Q.E and adds the vertex to the tree.
+            % Note that ExpEdge is without obstacle checking.
+            % 输入：Tree-树 T≡(V,E)
+            %      Q-优先队列 Q≡(Q.V,Q.E)
+            %      X_ncon-尚未连接到树中的节点
+            %      X_flags- X_flags≡(X_new,V_exp,V_rewire,V_sol,c_sol)
 
+            % Line 1
+            [v_best, x_best] = PopBest(Q, 'E');
+
+            % Line 2-4
+            % The best edge in the edge queue cannot improve the solution
+            if cost.g_(v_best)+cost.c_(v_best, x_best)+cost.h_(x_best)
+                Q.E = [];
+                Q.V = [];
+                return;
+            end
+
+            % Line 5-10
+            % x_best is unconnected
+            if ~ismember(x_best, X_ncon)
+                % Adds x_best to the tree
+                if cost.g_(v_bst)+cost.c_(v_best, x_best)+cost.h_(x_best) < X_flags.c_sol
+                    % X_ncon中去除x_best
+                    X_ncon = X_ncon(~ismember(X_ncon, x_best));
+                    % Tree.V <-+ x_best
+                    Tree.V = {Tree.V, x_best};
+                    % Tree.E <-+ (v_best, x_best)
+                    Tree.E = {Tree.E, struct('father',v_best,'cost',cost.g_(v_best)+cost.c_(v_best, x_best))};
+                    % Q.V <-+ x_best
+                    Q.V = {Q.V, x_best};
+                    if ismember(x_best, X_t)% 实际实现不用集合论
+                        % X_flags.V_sol <-+ x_best
+                        X_flags.V_sol = {X_flags.V_sol, x_best};
+                        % X_flags.c_sol <-+ minv_sol∈V_sol gT(v_sol)
+                        for i = 1:length(X_flags.V_sol)
+                            gTV_sol = {gTV_sol, gT(X_flags.V_sol(i))};
+                        end
+                        X_flags.c_sol = min(gTV_sol);
+                    end
+                end
+                
+            % Line 11
+            % x_best is connected
+            else
+                % Line 12
+                if cost.gT(v_best)+cost.c_(v_best, x_best)<cost.gT(x_best)
+                    % Line 13
+                    if cost.gT(v_best)+cost.c(v_best, x_best)+cost.h_(x_best)<X_flags.c_sol
+                        % Line 14
+                        if cost.gT(v_best)+cost.c(v_best, x_best)<cost.gT(x_best)
+                            % Line 15
+                            % Tree.E <-- (Par(x_best), x_best)
+                            % Tree.E <-- (v_best, x_best)
+                            % 找到x_best在Tree.V中的索引
+                            index = find(cellfun(@(x) isequal(x, x_best), Tree.V));
+                            Tree.E(index) = struct('father',v_best,'cost',cost.gT(v_best)+cost.c(v_best, x_best));
+
+                            % Line 16
+                            % c_sol <- minv_sol∈V_sol gT(v_sol)
+                            for i = 1:length(X_flags.V_sol)
+                                gTV_sol = {gTV_sol, gT(X_flags.V_sol(i))};
+                            end
+                            X_flags.c_sol = min(gTV_sol);
+                        end
+                    end
+                end
+            end
+        end
         function X_rand = randSample(obj, m)
             % [II.B Definiton 6]
             % 在X_free与椭球空间(informed set)的交集中随机采样。
