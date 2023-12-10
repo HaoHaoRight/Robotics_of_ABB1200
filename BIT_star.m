@@ -107,7 +107,7 @@ classdef BIT_star
             %      X_ncon-尚未连接到树中的节点
             %      X_flags- X_flags≡(X_new,V_exp,V_rewire,V_sol,c_sol)
             % Line 1
-            X_reuse = [];
+            X_reuse = {};
             % Line 2
             % Removes all umconnected samples with cost.g_(X_ncon(i)) + cost.h_(X_ncon(i)) >= X_flags.c_sol
             % Note that this can be thought of as removeing all nodes that fall outside of the "informed set" and as such provably cannot contribute to the optimal solution.
@@ -244,7 +244,7 @@ classdef BIT_star
                         X_flags.c_sol = min(gTV_sol);
                     end
                 end
-                
+
             % Line 11
             % x_best is connected
             else
@@ -346,11 +346,17 @@ classdef BIT_star
             % 输入：Q_i - 优先队列Q_E或Q_V
             % 输出：x - 最优节点
             if(name == 'V')
-                [~, index] = min(cost(Q.V));
+                [~, index] = min(cost.g_(Q.V)+cost.h_(Q.V));% 待确认
                 x = Q.V(index);
                 Q.V(index) = [];
+                Q.V = Q.V(~cellfun('isempty',Q.V));% 去除空元素
             end
-
+            if(name == 'E')
+                [~, index] = min(Q.E(:).cost);
+                x = [Q.E(index).father, Q.V(index)];
+                Q.E(index) = [];
+                Q.E = Q.E(~cellfun('isempty',Q.E));% 去除空元素
+            end
         end
         function distance = dist(x1, x2)
             % 计算两点间的欧几里得距离。
@@ -360,5 +366,5 @@ classdef BIT_star
             distance = sqrt((x1(1)-x2(1))^2+(x1(2)-x2(2))^2+(x1(3)-x2(3))^2);
         end
 
-    end
-end
+    end % methods end
+end % classdef end
