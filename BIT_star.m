@@ -10,7 +10,7 @@ classdef BIT_star
    % 3. rewire操作待实现
    % 4. 变量X_t, X_reuse
    %% 【数据结构】
-   % 坐标矩阵:x = [x;y;z]列向量
+   % 坐标矩阵:x/v = [x;y;z]列向量
    % 边(edge)结构体：e = struct('father',v,'cost',cost)，其中father是父节点，cost是边代价
    % 为了保持代码简洁性，约定集合形如：
    % Tree.E = {
