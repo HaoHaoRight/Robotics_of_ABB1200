@@ -8,7 +8,8 @@ classdef BIT_star
    % 1. 代价函数cost待实现
    % 2. randSample(obj, m)待实现
    % 3. rewire操作待实现
-   % 4. 变量X_t, X_reuse
+   % 4. 变量X_t,在代码实现上要用x_goal的邻域进行判断
+   % 5. PopBest(Q, name)比best的标准在论文里已经给出
    %% 【数据结构】
    % 坐标矩阵:x/v = [x;y;z]列向量
    % 边(edge)结构体：e = struct('father',v,'cost',cost)，其中father是父节点，cost是边代价
@@ -17,7 +18,7 @@ classdef BIT_star
    %            struct('father',[],'cost',[]),
    %            struct('father',[],'cost',[]),
    %            ...
-   %          } 
+   %          }
    % 每条边作为独立的实体，以Tree.V(index).Name的形式访问数据
    % 这可能会增大内存开销
 
