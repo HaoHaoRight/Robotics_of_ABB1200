@@ -4,6 +4,11 @@ classdef BIT_star
    % 重要区别：x是点坐标，v是顶点(vertex)
    % 大写是集合，小写是元素
    
+   %% TODO
+   % 1. 代价函数cost待实现
+   % 2. randSample(obj, m)待实现
+   % 3. rewire操作待实现
+   % 4. 变量X_t, X_reuse
    %% 【数据结构】
    % 坐标矩阵:x = [x;y;z]列向量
    % 边(edge)结构体：e = struct('father',v,'cost',cost)，其中father是父节点，cost是边代价
@@ -83,24 +88,37 @@ classdef BIT_star
             end
 
             % Line 7-17
-            while stop
+            % 待定义stop条件
+            while stop 
                 % Line 8
                 % Prune sub-optimal nodes
                 if xor(isempty(Q.V), isempty(Q.E)) % End of batch
-                    
+                    % Line 9-12
+                    % Prune sub-optimal nodes
+                    X_reuse, obj.Tree, obj.X_ncon, obj.X_flags = Prune(obj.Tree, obj.X_ncon, obj.X_flags);
+                    % Generate new batch of samples
+                    X_new = randSample(m);
+                    % Add new samples to queues
+                    % 在X_ncon中加入X_new和X_reuse的交集
+                    obj.X_ncon = {X_ncon, intersect(X_reuse, X_new)};
+                    obj.Q.V = {Q.V, obj.Tree.V};
 
-                % Line 9
+                % Line 13
                 % Process best vertex available
                 elseif BestVertex(Q, 'V') <= BestVertex(Q, 'E') 
-                    Q, X_flags = ExpVertex(Tree, Q, X_ncon, X_flags);
+                    obj.Q, obj.X_flags = ExpVertex(obj.Tree, obj.Q, obj.X_ncon, obj.X_flags);
 
-                %Line 15
+                % Line 15
                 % Process best edge available
                 else
-                    Tree, Q, X_ncon, X_flags = ExpEdge(Tree, Q, X_ncon, X_flags);% 待实现
+                    obj.Tree, obj.Q, obj.X_ncon, obj.X_flags = ExpEdge(obj.Tree, obj.Q, obj.X_ncon, obj.X_flags);% 待实现
                 end
-            end
-        end
+            end % while end
+
+            % Line 18
+            % Solution(arg minv_t∈V_sol gT(v_t))
+
+        end % BIT_star end
         function [X_reuse, Tree, X_ncon, X_flags] = Prune(Tree, X_ncon, X_flags)
             % [III.B] Algorithm 2
             % 输入：Tree-树 T≡(V,E)
