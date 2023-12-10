@@ -178,7 +178,7 @@ classdef BIT_star
                 X_flags.V_exp = {X_flags.V_exp, v_best};
                 X_near = findNear(v_best, X_ncon);
             else % v_best has been expanded before
-                X_search = cell2mat(intersect(X_flags.X_new, X_ncon))
+                X_search = cell2mat(intersect(X_flags.X_new, X_ncon));
                 X_near = findNear(v_best, X_search);
             end
 
