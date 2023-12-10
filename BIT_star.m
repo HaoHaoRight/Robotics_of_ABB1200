@@ -17,7 +17,7 @@ classdef BIT_star
    % 这可能会增大内存开销
 
    % 我还没有完全理解重连操作rewire，待理解
-   % 为避免混肴，将要考虑把V定义为matrix，E定义为cell
+   % 为避免混肴，把V定义为matrix，E定义为cell
    % 这样可以使x和v同源，而v则是树中的顶点
    % 因为V.cost多余了，点的成本完全可以单独计算
    % 不确定isempty(Q.V)是否正确
@@ -101,7 +101,46 @@ classdef BIT_star
                 end
             end
         end
-
+        function [X_reuse, Tree, X_ncon, X_flags] = Prune(Tree, X_ncon, X_flags)
+            % [III.B] Algorithm 2
+            % 输入：Tree-树 T≡(V,E)
+            %      X_ncon-尚未连接到树中的节点
+            %      X_flags- X_flags≡(X_new,V_exp,V_rewire,V_sol,c_sol)
+            % Line 1
+            X_reuse = [];
+            % Line 2
+            % Removes all umconnected samples with cost.g_(X_ncon(i)) + cost.h_(X_ncon(i)) >= X_flags.c_sol
+            % Note that this can be thought of as removeing all nodes that fall outside of the "informed set" and as such provably cannot contribute to the optimal solution.
+            % 这可以理解为从“启发集合”中移除那些点。启发集合是 Informed RRT* 算法中定义的一个概念，它包括那些仍有可能贡献于最佳解决方案的节点。
+            for i = 1:length(X_ncon)
+                if cost.g_(X_ncon(i)) + cost.h_(X_ncon(i)) >= X_flags.c_sol
+                    X_ncon(i) = [];
+                end
+            end
+            % 去除X_ncon中的空元素
+            X_ncon = X_ncon(~cellfun('isempty',X_ncon));
+            
+            % Line 3-7
+            for i = 1:length(Tree.V)
+                if cost.g_(Tree.V(i)) + cost.h_(Tree.V(i)) > X_flags.c_sol
+                    Tree.V(i) = [];
+                    Tree.E(i) = [];
+                    X.flags.V_rewire(i) = [];
+                    X.flags.V_exp(i) = [];
+                    X_t(i) = [];
+                    % If v can possibility help
+                    if cost.g_(Tree.V(i)) + cost.h_(Tree.V(i)) < X_flags.c_sol
+                        X_reuse = {X_reuse, Tree.V(i)};
+                    end
+                end
+                % 去除空元素
+                Tree.V = Tree.V(~cellfun('isempty',Tree.V));
+                Tree.E = Tree.E(~cellfun('isempty',Tree.E));
+                X.flags.V_rewire = X.flags.V_rewire(~cellfun('isempty',X.flags.V_rewire));
+                X.flags.V_exp = X.flags.V_exp(~cellfun('isempty',X.flags.V_exp));
+                X_t = X_t(~cellfun('isempty',X_t));
+            end
+        end
         function [Q, X_flags] = ExpVertex(Tree, Q, X_ncon, X_flags)
             % [III.B] Algorithm 3
             % ExpVertex removes the lowest cost vertex from the queue Q.V and adds edges Q.E 
@@ -129,7 +168,7 @@ classdef BIT_star
             % (v_best, x)表示一条从v_best到x的边  
             for i = 1:length(X_near)
                 x = X_near(i);
-                cost = g_(v_best)+c_(v_best,x)+h_(x);%% 代写完整的cost函数
+                cost = cost.g_(v_best)+cost.c_(v_best,x)+cost.h_(x);%% 代写完整的cost函数
                 if cost < X_flags.c_sol
                     Q.E = {Q.E, struct('father',v_best,'cost',cost)};% adds edges
                 end
@@ -156,7 +195,7 @@ classdef BIT_star
                 for i = 1:length(X_flags.V_near)
                     w = X_flags.V_near(i);
                     % 代价函数待实现
-                    if ismember(struct('father',v_best,'cost',[]), Tree.E) && g(v_best)+c(v_best,w)<gT(w) && g(v_best)+c(v_best,w)+h(w)<X_flags.c_sol
+                    if ismember(struct('father',v_best,'cost',[]), Tree.E) && cost.g_(v_best)+cost.c_(v_best,w)<cost.gT(w) && cost.g_(v_best)+cost.c(v_best,w)+cost.h_(w)<X_flags.c_sol
                         Q.E = {Q.E, struct('father',v_best,'cost',g(v_best)+c(v_best,w))};
                     end
                 end
