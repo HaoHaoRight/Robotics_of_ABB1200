@@ -89,7 +89,7 @@ classdef BIT_star
 
             % Line 7-17
             % 待定义stop条件
-            while stop 
+            while stop
                 % Line 8
                 % Prune sub-optimal nodes
                 if xor(isempty(Q.V), isempty(Q.E)) % End of batch
@@ -112,7 +112,7 @@ classdef BIT_star
                 % Process best edge available
                 else
                     obj.Tree, obj.Q, obj.X_ncon, obj.X_flags = ExpEdge(obj.Tree, obj.Q, obj.X_ncon, obj.X_flags);% 待实现
-                end
+                end % if end
             end % while end
 
             % Line 18
@@ -215,7 +215,7 @@ classdef BIT_star
                     w = X_flags.V_near(i);
                     % 代价函数待实现
                     if ismember(struct('father',v_best,'cost',[]), Tree.E) && cost.g_(v_best)+cost.c_(v_best,w)<cost.gT(w) && cost.g_(v_best)+cost.c(v_best,w)+cost.h_(w)<X_flags.c_sol
-                        Q.E = {Q.E, struct('father',v_best,'cost',g(v_best)+c(v_best,w))};
+                        Q.E = {Q.E, struct('father',v_best,'cost',cost.g_(v_best)+cost.c(v_best,w)+cost.h_(w))};
                     end
                 end
             end
