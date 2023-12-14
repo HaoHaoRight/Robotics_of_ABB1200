@@ -48,6 +48,42 @@ classdef Obstacle
             minDist = sqrt(dx^2 + dy^2 + dz^2);
         end
         
+        function intersecting = isVectorIntersectingObstacle(obj, vectorStart, vectorEnd)
+            % 判断向量与长方体障碍物是否相交
+            %   vectorStart: 向量的起点坐标
+            %   vectorEnd: 向量的终点坐标
+            % 返回 true 如果相交，否则返回 false
+            
+            % 计算向量的参数表示式：x = x0 + t*(x1-x0), y = y0 + t*(y1-y0), z = z0 + t*(z1-z0)
+            % 其中(x0, y0, z0)是起点坐标，(x1, y1, z1)是终点坐标
+            x0 = vectorStart(1); y0 = vectorStart(2); z0 = vectorStart(3);
+            x1 = vectorEnd(1); y1 = vectorEnd(2); z1 = vectorEnd(3);
+            
+            % 计算向量与正方体每个面的交点
+            intersections = [
+                obj.intersectionWithPlane(x0, y0, z0, x1, y1, z1, min(obj.vertices(:,1)), 'x');
+                obj.intersectionWithPlane(x0, y0, z0, x1, y1, z1, max(obj.vertices(:,1)), 'x');
+                obj.intersectionWithPlane(y0, x0, z0, y1, x1, z1, min(obj.vertices(:,2)), 'y');
+                obj.intersectionWithPlane(y0, x0, z0, y1, x1, z1, max(obj.vertices(:,2)), 'y');
+                obj.intersectionWithPlane(z0, y0, x0, z1, y1, x1, min(obj.vertices(:,3)), 'z');
+                obj.intersectionWithPlane(z0, y0, x0, z1, y1, x1, max(obj.vertices(:,3)), 'z');
+            ];
+            
+            % 检查交点是否在正方体面内
+            intersecting = any(all(intersections >= min(obj.vertices) - eps & intersections <= max(obj.vertices) + eps, 2));
+        end
+        
+        function intersection = intersectionWithPlane(x0, y0, z0, x1, y1, z1, planeVal, planeAxis)
+            % 计算向量与平行于坐标轴的平面的交点
+            %   x0, y0, z0: 向量的起点坐标
+            %   x1, y1, z1: 向量的终点坐标
+            %   planeVal: 平面的坐标值（x、y 或 z）
+            %   planeAxis: 平面所在的轴（'x'、'y' 或 'z'）
+            % 返回交点坐标
+            t = (planeVal - eval([planeAxis '0'])) / (eval([planeAxis '1']) - eval([planeAxis '0']));
+            intersection = [x0 + t*(x1 - x0), y0 + t*(y1 - y0), z0 + t*(z1 - z0)];
+        end
+
         function plotObstacle(obj)
             % 绘制障碍物
             for edge = obj.edges'
