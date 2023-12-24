@@ -12,11 +12,11 @@ classdef BIT_star
    % 5. PopBest(Q, name)比best的标准在论文里已经给出
    %% 【数据结构】
    % 坐标矩阵:x/v = [x;y;z]列向量
-   % 边(edge)结构体：e = struct('father',v,'cost',cost)，其中father是父节点，cost是边代价
+   % 边(edge)结构体：e = struct('edge',[v,x],'cost',cost)，其中father是父节点，cost是边代价
    % 为了保持代码简洁性，约定集合形如：
    % Tree.E = {
-   %            struct('father',[],'cost',[]),
-   %            struct('father',[],'cost',[]),
+   %            struct('edge',[],'cost',[]),
+   %            struct('edge',[],'cost',[]),
    %            ...
    %          }
    % 每条边作为独立的实体，以Tree.V(index).Name的形式访问数据
@@ -62,12 +62,12 @@ classdef BIT_star
             % 树储存的节点是Node类的对象
             obj.Tree = {struct('V',[],'E',[])};
             obj.Tree.V = {x_root};% 初始树只有一个节点，即根节点
-            obj.Tree.E = {struct('father',[],'cost',[])};% 边的结构体
+            obj.Tree.E = {struct('edge',{},'cost',[])};% 边的结构体
 
             %Line 2
             obj.Q = {struct('V',[],'E',[])};% 优先队列(queue)
             obj.Q.V = {Tree.V};% vertex queue
-            obj.Q.E = {struct('father',[],'cost',[])};% edge queue
+            obj.Q.E = {struct('edge',{},'cost',[])};% edge queue
 
             % Line 3-6
             obj.X_flags = {struct('X_new',{},'V_exp',{},'V_rewire',{},'V_sol',{},'c_sol',{})};
@@ -83,7 +83,7 @@ classdef BIT_star
                 % c_sol <- minv∈V_sol gT(v) 待优化
                 gTV = {};
                 for i = 1:length(obj.X_flags.V_sol)
-                    gTV = {gTV, gT(obj.X_flags.V_sol)};%gT待实现
+                    gTV = {gTV, gT(obj.X_flags.V_sol, obj.Tree)};%gT待实现
                 end
                 obj.X_flags.c_sol = min(gTV);%gT待实现
             end
@@ -106,7 +106,7 @@ classdef BIT_star
 
                 % Line 13
                 % Process best vertex available
-                elseif BestVertex(Q, 'V') <= BestVertex(Q, 'E') 
+                elseif cost.BestValue(Q, 'V') <= cost.BestValue(Q, 'E') 
                     obj.Q, obj.X_flags = ExpVertex(obj.Tree, obj.Q, obj.X_ncon, obj.X_flags);
 
                 % Line 15
@@ -190,7 +190,7 @@ classdef BIT_star
                 x = X_near(i);
                 cost = cost.g_(v_best)+cost.c_(v_best,x)+cost.h_(x);%% 代写完整的cost函数
                 if cost < X_flags.c_sol
-                    Q.E = {Q.E, struct('father',v_best,'cost',cost)};% adds edges
+                    Q.E = {Q.E, struct('edge',[v_best,x],'cost',cost)};% adds edges
                 end
             end
 
@@ -215,8 +215,8 @@ classdef BIT_star
                 for i = 1:length(X_flags.V_near)
                     w = X_flags.V_near(i);
                     % 代价函数待实现
-                    if ismember(struct('father',v_best,'cost',[]), Tree.E) && cost.g_(v_best)+cost.c_(v_best,w)<cost.gT(w) && cost.g_(v_best)+cost.c(v_best,w)+cost.h_(w)<X_flags.c_sol
-                        Q.E = {Q.E, struct('father',v_best,'cost',cost.g_(v_best)+cost.c(v_best,w)+cost.h_(w))};
+                    if ismember(struct('edge',[v_best,w],'cost',[]), Tree.E) && cost.g_(v_best)+cost.c_(v_best,w)<cost.gT(w, Tree) && cost.g_(v_best)+cost.c(v_best,w)+cost.h_(w)<X_flags.c_sol
+                        Q.E = {Q.E, struct('edge',[v_best,w],'cost',cost.g_(v_best)+cost.c(v_best,w)+cost.h_(w))};
                     end
                 end
             end
@@ -251,7 +251,7 @@ classdef BIT_star
                     % Tree.V <-+ x_best
                     Tree.V = {Tree.V, x_best};
                     % Tree.E <-+ (v_best, x_best)
-                    Tree.E = {Tree.E, struct('father',v_best,'cost',cost.g_(v_best)+cost.c_(v_best, x_best))};
+                    Tree.E = {Tree.E, struct('edge',[v_best, x_best],'cost',cost.g_(v_best)+cost.c_(v_best, x_best))};
                     % Q.V <-+ x_best
                     Q.V = {Q.V, x_best};
                     if ismember(x_best, X_t)% 实际实现不用集合论
@@ -259,7 +259,7 @@ classdef BIT_star
                         X_flags.V_sol = {X_flags.V_sol, x_best};
                         % X_flags.c_sol <-+ minv_sol∈V_sol gT(v_sol)
                         for i = 1:length(X_flags.V_sol)
-                            gTV_sol = {gTV_sol, gT(X_flags.V_sol(i))};
+                            gTV_sol = {gTV_sol, gT(X_flags.V_sol(i), Tree)};
                         end
                         X_flags.c_sol = min(gTV_sol);
                     end
@@ -269,22 +269,22 @@ classdef BIT_star
             % x_best is connected
             else
                 % Line 12
-                if cost.gT(v_best)+cost.c_(v_best, x_best)<cost.gT(x_best)
+                if cost.gT(v_best, Tree)+cost.c_(v_best, x_best)<cost.gT(x_best, Tree)
                     % Line 13
-                    if cost.gT(v_best)+cost.c(v_best, x_best)+cost.h_(x_best)<X_flags.c_sol
+                    if cost.gT(v_best, Tree)+cost.c(v_best, x_best)+cost.h_(x_best)<X_flags.c_sol
                         % Line 14
-                        if cost.gT(v_best)+cost.c(v_best, x_best)<cost.gT(x_best)
+                        if cost.gT(v_best, Tree)+cost.c(v_best, x_best)<cost.gT(x_best, Tree)
                             % Line 15
                             % Tree.E <-- (Par(x_best), x_best)
                             % Tree.E <-- (v_best, x_best)
                             % 找到x_best在Tree.V中的索引
                             index = find(cellfun(@(x) isequal(x, x_best), Tree.V));
-                            Tree.E(index) = struct('father',v_best,'cost',cost.gT(v_best)+cost.c(v_best, x_best));
+                            Tree.E(index) = struct('edge',[v_best, x_best],'cost',cost.gT(v_best, Tree)+cost.c(v_best, x_best));
 
                             % Line 16
                             % c_sol <- minv_sol∈V_sol gT(v_sol)
                             for i = 1:length(X_flags.V_sol)
-                                gTV_sol = {gTV_sol, gT(X_flags.V_sol(i))};
+                                gTV_sol = {gTV_sol, gT(X_flags.V_sol(i), Tree)};
                             end
                             X_flags.c_sol = min(gTV_sol);
                         end
@@ -345,14 +345,8 @@ classdef BIT_star
                     break;
                 end
         
-                % 在 Tree.V 中找到 current_node 的索引
-                node_index = find(arrayfun(@(v) isequal(v, current_node), obj.Tree.V));
-                if isempty(node_index)
-                    error('node not found in Tree.V');
-                end
-        
                 % 使用 node_index 在 Tree.E 中找到对应的父节点
-                father_node = obj.Tree.E(node_index).father;
+                father_node = obj.Tree.E{Tree.V == current_node}.edge(1);
         
                 % 更新当前节点为父节点的坐标，继续回溯
                 current_node = father_node;
