@@ -5,9 +5,9 @@ classdef BIT_star
    % 大写是集合，小写是元素
    
    %% TODO
-   % 1. 代价函数cost待实现
+   % 1. 代价函数cost待实现 x
    % 2. randSample(obj, m)待实现
-   % 3. rewire操作待实现
+   % 3. rewire操作待实现 ？
    % 4. 变量X_t,在代码实现上要用x_goal的邻域进行判断
    % 5. PopBest(Q, name)比best的标准在论文里已经给出
    %% 【数据结构】
@@ -60,17 +60,17 @@ classdef BIT_star
             % 树是一个有向无环图，表示为 T≡(V,E)
             % V是节点集合，E是边集合
             % 树储存的节点是Node类的对象
-            obj.Tree = {struct('V',[],'E',[])};
+            obj.Tree = struct('V',[],'E',[]);
             obj.Tree.V = {x_root};% 初始树只有一个节点，即根节点
-            obj.Tree.E = {struct('edge',{},'cost',[])};% 边的结构体
+            obj.Tree.E = {struct('edge',[],'cost',[])};% 边的结构体
 
             %Line 2
-            obj.Q = {struct('V',[],'E',[])};% 优先队列(queue)
+            obj.Q = struct('V',[],'E',[]);% 优先队列(queue)
             obj.Q.V = {Tree.V};% vertex queue
-            obj.Q.E = {struct('edge',{},'cost',[])};% edge queue
+            obj.Q.E = {struct('edge',[],'cost',[])};% edge queue
 
             % Line 3-6
-            obj.X_flags = {struct('X_new',{},'V_exp',{},'V_rewire',{},'V_sol',{},'c_sol',{})};
+            obj.X_flags = struct('X_new',{},'V_exp',{},'V_rewire',{},'V_sol',{},'c_sol',{});
             obj.X_ncon = X_goal;% 尚未连接到树中的节点
             obj.X_flags.X_new = obj.X_ncon;
             obj.X_flags.c_sol = inf;
@@ -188,9 +188,9 @@ classdef BIT_star
             % (v_best, x)表示一条从v_best到x的边  
             for i = 1:length(X_near)
                 x = X_near(i);
-                cost = cost.g_(v_best)+cost.c_(v_best,x)+cost.h_(x);%% 代写完整的cost函数
-                if cost < X_flags.c_sol
-                    Q.E = {Q.E, struct('edge',[v_best,x],'cost',cost)};% adds edges
+                Cost = cost.g_(v_best)+cost.c_(v_best,x)+cost.h_(x);%% 代写完整的cost函数
+                if Cost < X_flags.c_sol
+                    Q.E = {Q.E, struct('edge',[v_best,x],'cost',cost.gT(v_best, Tree)+cost.c_(v_best,x)+cost.h_(x))};% adds edges
                 end
             end
 
@@ -216,7 +216,7 @@ classdef BIT_star
                     w = X_flags.V_near(i);
                     % 代价函数待实现
                     if ismember(struct('edge',[v_best,w],'cost',[]), Tree.E) && cost.g_(v_best)+cost.c_(v_best,w)<cost.gT(w, Tree) && cost.g_(v_best)+cost.c(v_best,w)+cost.h_(w)<X_flags.c_sol
-                        Q.E = {Q.E, struct('edge',[v_best,w],'cost',cost.g_(v_best)+cost.c(v_best,w)+cost.h_(w))};
+                        Q.E = {Q.E, struct('edge',[v_best,w],'cost',cost.gT(v_best, Tree)+cost.c_(v_best,w)+cost.h_(w))};
                     end
                 end
             end
@@ -235,7 +235,7 @@ classdef BIT_star
 
             % Line 2-4
             % The best edge in the edge queue cannot improve the solution
-            if cost.g_(v_best)+cost.c_(v_best, x_best)+cost.h_(x_best)
+            if cost.g_(v_best)+cost.c_(v_best, x_best) + cost.h_(x_best)
                 Q.E = [];
                 Q.V = [];
                 return;
@@ -251,7 +251,7 @@ classdef BIT_star
                     % Tree.V <-+ x_best
                     Tree.V = {Tree.V, x_best};
                     % Tree.E <-+ (v_best, x_best)
-                    Tree.E = {Tree.E, struct('edge',[v_best, x_best],'cost',cost.g_(v_best)+cost.c_(v_best, x_best))};
+                    Tree.E = {Tree.E, struct('edge',[v_best, x_best],'cost',cost.gT(v_best, Tree)+cost.c_(v_best, x_best)+cost.h_(x_best))};
                     % Q.V <-+ x_best
                     Q.V = {Q.V, x_best};
                     if ismember(x_best, X_t)% 实际实现不用集合论
@@ -366,8 +366,8 @@ classdef BIT_star
                 Q.V = Q.V(~cellfun('isempty',Q.V));% 去除空元素
             end
             if(name == 'E')
-                [~, index] = min(Q.E(:).cost);
-                x = [Q.E(index).father, Q.V(index)];
+                index = find(cellfun(@(x) x.cost, Q.E) == min(cellfun(@(x) x.cost, Q.E)));
+                x = [Q.E(index).edge];
                 Q.E(index) = [];
                 Q.E = Q.E(~cellfun('isempty',Q.E));% 去除空元素
             end

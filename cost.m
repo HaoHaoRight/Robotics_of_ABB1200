@@ -43,7 +43,7 @@ classdef cost
                 for i = 1:length(Tree.V)
                         % 从树中获取指定节点的父节点。
                         father = Tree.E{Tree.V == current_node}.edge(1);
-                        gT = gT + Tree.E{Tree.V == current_node}.cost;% ?不确定
+                        gT = gT + cost.c_(Tree.E{Tree.V == current_node}.edge(1), Tree.E{Tree.V == current_node}.edge(2));% ?不确定
                         current_node = father;
                 end
             end
@@ -78,10 +78,10 @@ classdef cost
             end
             % QE queue cost: gT(v)+c_(v, x)+h_(x)
             if(name == 'E')
-                BestValue = min(cost.gT(Q.E.edge(1), Tree)+cost.c_(Q.E.edge(1), Q.E.edge(2))+cost.h_(Q.E.edge(2)));
+                BestValue = min(cellfun(@(x) x.cost, Q.E));
             end
 
-        end  
+        end
 
     end % methods
 end % classdef
