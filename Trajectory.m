@@ -1,4 +1,3 @@
-
 classdef Trajectory
     properties
         q;      % 关节角度

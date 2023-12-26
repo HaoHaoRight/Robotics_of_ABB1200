@@ -62,7 +62,7 @@ classdef BIT_star
             % 树储存的节点是Node类的对象
             obj.Tree = struct('V',[],'E',[]);
             obj.Tree.V = {x_root};% 初始树只有一个节点，即根节点
-            obj.Tree.E = {struct('edge',[],'cost',[])};% 边的结构体
+            obj.Tree.E = {struct('edge',[],'cost',[])S};% 边的结构体
 
             %Line 2
             obj.Q = struct('V',[],'E',[]);% 优先队列(queue)
@@ -118,6 +118,7 @@ classdef BIT_star
 
             % Line 18
             % Solution(arg minv_t∈V_sol gT(v_t))
+            X_sol = Solution()
 
         end % BIT_star end
         function [X_reuse, Tree, X_ncon, X_flags] = Prune(Tree, X_ncon, X_flags)
