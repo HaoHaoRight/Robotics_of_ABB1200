@@ -62,7 +62,7 @@ classdef BIT_star
             % 树储存的节点是Node类的对象
             obj.Tree = struct('V',[],'E',[]);
             obj.Tree.V = {x_root};% 初始树只有一个节点，即根节点
-            obj.Tree.E = {struct('edge',[],'cost',[])S};% 边的结构体
+            obj.Tree.E = {struct('edge',[],'cost',[])};% 边的结构体
 
             %Line 2
             obj.Q = struct('V',[],'E',[]);% 优先队列(queue)
@@ -93,12 +93,12 @@ classdef BIT_star
             while stop
                 % Line 8
                 % Prune sub-optimal nodes
-                if xor(isempty(Q.V), isempty(Q.E)) % End of batch
+                if isempty(Q.V) && isempty(Q.E) % End of batch
                     % Line 9-12
                     % Prune sub-optimal nodes
                     X_reuse, obj.Tree, obj.X_ncon, obj.X_flags = Prune(obj.Tree, obj.X_ncon, obj.X_flags);
                     % Generate new batch of samples
-                    X_new = randSample(m);
+                    X_new = randSample(m); %%%%%%%%%%%% 没写
                     % Add new samples to queues
                     % 在X_ncon中加入X_new和X_reuse的交集
                     obj.X_ncon = {X_ncon, intersect(X_reuse, X_new)};
@@ -142,7 +142,7 @@ classdef BIT_star
             
             % Line 3-7
             for i = 1:length(Tree.V)
-                if cost.g_(Tree.V(i)) + cost.h_(Tree.V(i)) > X_flags.c_sol
+                if cost.gT(Tree.V(i), Tree) + cost.h_(Tree.V(i)) > X_flags.c_sol
                     Tree.V(i) = [];
                     Tree.E(i) = [];
                     X.flags.V_rewire(i) = [];
@@ -196,7 +196,7 @@ classdef BIT_star
             end
 
             % Line 8-10
-            if ~ismember(v_best, X_flags.V_rewire) ^ X_flags.V_rewire.c_sol < inf
+            if ~ismember(v_best, X_flags.V_rewire) && X_flags.V_rewire.c_sol < inf
                 % v_best是否已经不在重连顶点集合 XOR 至少找到了一个解
                 % 以下条件仅一个为真时成立：1.v_best之前没有考虑过重连，第一个解尚未找到 2.v_best之前考虑过重连，但是此时已经有一个解了
                 % 作用：在还没有找到任何解的情况下，算法会跳过重连操作，以更快地找到第一个解。一旦找到第一个解，算法则会考虑之前跳过的重连操作，以进一步优化和改进找到的解。
@@ -215,8 +215,7 @@ classdef BIT_star
                 % Q.E <-+ {(v_best, w), w ∈ V_near|(v_best,w)∈E and g_(v_best)+c_(v_best,w)<gT(w),g_(v_best)+c_(v_best,w)+h_(w)<c_sol}
                 for i = 1:length(X_flags.V_near)
                     w = X_flags.V_near(i);
-                    % 代价函数待实现
-                    if ismember(struct('edge',[v_best,w],'cost',[]), Tree.E) && cost.g_(v_best)+cost.c_(v_best,w)<cost.gT(w, Tree) && cost.g_(v_best)+cost.c(v_best,w)+cost.h_(w)<X_flags.c_sol
+                    if (~ismember(struct('edge',[v_best,w],'cost',[]), Tree.E)) && cost.g_(v_best)+cost.c_(v_best,w)<cost.gT(w, Tree) && cost.g_(v_best)+cost.c(v_best,w)+cost.h_(w)<X_flags.c_sol
                         Q.E = {Q.E, struct('edge',[v_best,w],'cost',cost.gT(v_best, Tree)+cost.c_(v_best,w)+cost.h_(w))};
                     end
                 end
@@ -244,7 +243,7 @@ classdef BIT_star
 
             % Line 5-10
             % x_best is unconnected
-            if ~ismember(x_best, X_ncon)
+            if ismember(x_best, X_ncon)
                 % Adds x_best to the tree
                 if cost.g_(v_bst)+cost.c_(v_best, x_best)+cost.h_(x_best) < X_flags.c_sol
                     % X_ncon中去除x_best
@@ -255,7 +254,7 @@ classdef BIT_star
                     Tree.E = {Tree.E, struct('edge',[v_best, x_best],'cost',cost.gT(v_best, Tree)+cost.c_(v_best, x_best)+cost.h_(x_best))};
                     % Q.V <-+ x_best
                     Q.V = {Q.V, x_best};
-                    if ismember(x_best, X_t)% 实际实现不用集合论
+                    if ismember(x_best, X_t)% 实际实现不用集合论 %%%%%%%%%
                         % X_flags.V_sol <-+ x_best
                         X_flags.V_sol = {X_flags.V_sol, x_best};
                         % X_flags.c_sol <-+ minv_sol∈V_sol gT(v_sol)
