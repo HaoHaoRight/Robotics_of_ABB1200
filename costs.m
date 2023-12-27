@@ -1,4 +1,4 @@
-classdef cost
+classdef costs
     % [II.B Definition 1-5] 成本函数
     % c(x,y) | 计算X空间内点x到y的路径长度。如果阻塞则返回无穷大，或者路径不存在。
     % c_(x,y) | 计算X空间内点y∈X_i的路径成本的下界估计。c_不考虑障碍物。使用欧几里得距离定义为 c_(x,y):=∥x−y∥。
@@ -6,13 +6,24 @@ classdef cost
     % g_(x) | 为X空间内点x已经发生的下界估计。
     % h_(x) | 为X空间内点x的启发式的下界估计。h_(x,y):=c_(x,x_t)，其中x_t是通过规划问题找到的最佳解决方案的终点。
 
-    methods   
-       
+    properties
+        start;
+        goal;
+        obstacle;
+    end
+
+    methods
+        function obj = costs(start, goal, obstacle)
+            % 构造函数
+            obj.start = start;
+            obj.goal = goal;
+            obj.obstacle = obstacle;
+        end
  % c(x,y) | 计算X空间内点x到y的路径长度。如果阻塞则返回无穷大，或者路径不存在。               
-        function pathLength = c(x, y, obstacle)
+        function pathLength = c(x, y)
             % x:空间一点，y：空间一点，obstacle：障碍物类
             % 计算X空间内点x到y的路径长度。如果阻塞则返回无穷大，或者路径不存在。
-            if obstacle.isVectorIntersectingObstacle(x, y)
+            if obj.obstacle.isVectorIntersectingObstacle(x, y)
                 pathLength = Inf; % 如果相交，返回无穷大
                 return;
             end
@@ -33,12 +44,13 @@ classdef cost
             % Tree: 包含节点和边的树结构
 
             % 基本情况：如果当前节点是根节点，则成本为 0。
-            if isequal(current_node, Tree.V(1))
+            if isequal(current_node, Tree.V{1})
                 gT = 0;
                 return;
             end
             if ~ismember(Tree.V, current_node)
-                error('gT路径不存在');% 如果路径不存在，则抛出错误。
+                gT = inf;
+                return;
             end
             % 找到当前节点的父节点。假设父节点存储在边的第一个元素中。
             % 注意：这里假设每个节点只有一个父节点。
@@ -54,22 +66,21 @@ classdef cost
             % 累加父节点的成本和当前边的成本。
             gT = parent_cost + edge_cost;
         end
-        
-       
+
 % g_(x) | 为X空间内点x已经发生的下界估计。   
-        function g_hat = g_(current_node,start)
+        function g_hat = g_(current_node)
             % current_node是当前节点，start是起始节点
             % 生成当前节点的 g_hat 值。这是当前节点与起始节点之间的 L2 范数。
             % 计算当前节点与起始节点之间的 L2 范数。
-            g_hat = norm(current_node - start);
+            g_hat = norm(current_node - obj.start);
         end
         
  % h_(x) | 为X空间内点x的启发式的下界估计。h_(x,y):=c_(x,x_t)，其中x_t是通过规划问题找到的最佳解决方案的终点。
-        function h_hat = h_(current_node,goal)
+        function h_hat = h_(current_node)
             %current_node是当前节点，goal是目标节点             
             % 生成当前节点的 h_hat 值。这是当前节点与目标节点之间的 L2 范数。
             % 计算当前节点与目标节点之间的 L2 范数。
-            h_hat = norm(current_node - goal);
+            h_hat = norm(current_node - obj.goal);
         end
         
 % 定义 11 (cost ← BestValue(Qi))：查找 Qi 中队列成本最低的元素，并返回该元素的队列成本。    

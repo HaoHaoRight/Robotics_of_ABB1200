@@ -36,7 +36,7 @@ classdef BIT_star
         X_goal;% 机器人的目标位置
         X_flags;% X_new, V_exp, V_rewire, V_sol, c_sol
         X_ncon;% 尚未连接到树中的节点
-
+        cost;
         % [III] X_flags的定义
         % X_ncon ⊂ X | 是一个已被采样，但没有连接到搜索树的样本 集合。 is the set of all samples that are not connected to the search tree.
         % V_sol = V ∩ X_t | 包含已经到达目标区域的顶点，是V和X_t的 交集，。 is the set of vertices in V taht are also in target set X_t.
@@ -55,7 +55,7 @@ classdef BIT_star
             obj.x_root = start;
             obj.X_goal = goal;
             obj.obstacle = obstacle;
-
+            obj.cost = costs(obj.x_root, obj.X_goal, obj.obstacle);
             % Line 1
             % 树是一个有向无环图，表示为 T≡(V,E)
             % V是节点集合，E是边集合
@@ -106,7 +106,7 @@ classdef BIT_star
 
                 % Line 13
                 % Process best vertex available
-                elseif cost.BestValue(Q, 'V') <= cost.BestValue(Q, 'E')
+                elseif obj.cost.BestValue(Q, 'V') <= obj.cost.BestValue(Q, 'E')
                     obj.Q, obj.X_flags = ExpVertex(obj.Tree, obj.Q, obj.X_ncon, obj.X_flags);
 
                 % Line 15
@@ -118,7 +118,7 @@ classdef BIT_star
 
             % Line 18
             % Solution(arg minv_t∈V_sol gT(v_t))
-            gTV_sol = arrayfun(@(v) cost.gT(v, Tree), X_flags.V_sol);% V_sol定义待实现
+            gTV_sol = arrayfun(@(v) obj.cost.gT(v, Tree), X_flags.V_sol);% V_sol定义待实现
             [~, index] = min(gTV_sol);
             X_sol = Solution(X_flags.V_sol(index));
 
@@ -135,7 +135,7 @@ classdef BIT_star
             % Note that this can be thought of as removeing all nodes that fall outside of the "informed set" and as such provably cannot contribute to the optimal solution.
             % 这可以理解为从“启发集合”中移除那些点。启发集合是 Informed RRT* 算法中定义的一个概念，它包括那些仍有可能贡献于最佳解决方案的节点。
             for i = 1:length(X_ncon)
-                if cost.g_(X_ncon(i)) + cost.h_(X_ncon(i)) >= X_flags.c_sol
+                if obj.cost.g_(X_ncon(i)) + obj.cost.h_(X_ncon(i)) >= X_flags.c_sol
                     X_ncon(i) = [];
                 end
             end
@@ -144,14 +144,14 @@ classdef BIT_star
             
             % Line 3-7
             for i = 1:length(Tree.V)
-                if cost.gT(Tree.V(i), Tree) + cost.h_(Tree.V(i)) > X_flags.c_sol
+                if obj.cost.gT(Tree.V(i), Tree) + obj.cost.h_(Tree.V(i)) > X_flags.c_sol
                     Tree.V(i) = [];
                     Tree.E(i) = [];
                     X.flags.V_rewire(i) = [];
                     X.flags.V_exp(i) = [];
                     X_t(i) = [];
                     % If v can possibility help
-                    if cost.g_(Tree.V(i)) + cost.h_(Tree.V(i)) < X_flags.c_sol
+                    if obj.cost.g_(Tree.V(i)) + obj.cost.h_(Tree.V(i)) < X_flags.c_sol
                         X_reuse = {X_reuse, Tree.V(i)};
                     end
                 end
@@ -191,8 +191,8 @@ classdef BIT_star
             % (v_best, x)表示一条从v_best到x的边  
             for i = 1:length(X_near)
                 x = X_near(i);
-                if cost.g_(v_best)+cost.c_(v_best,x)+cost.h_(x) < X_flags.c_sol
-                    Q.E = {Q.E, struct('edge',[v_best,x],'cost',cost.gT(v_best, Tree)+cost.c_(v_best,x)+cost.h_(x))};% adds edges
+                if obj.cost.g_(v_best)+obj.cost.c_(v_best,x)+obj.cost.h_(x) < X_flags.c_sol
+                    Q.E = {Q.E, struct('edge',[v_best,x],'cost',obj.cost.gT(v_best, Tree)+obj.cost.c_(v_best,x)+obj.cost.h_(x))};% adds edges
                 end
             end
 
@@ -215,8 +215,8 @@ classdef BIT_star
                 % Q.E <-+ {(v_best, w), w ∈ V_near|(v_best,w)∈E and g_(v_best)+c_(v_best,w)<gT(w),g_(v_best)+c_(v_best,w)+h_(w)<c_sol}
                 for i = 1:length(X_flags.V_near)
                     w = X_flags.V_near(i);
-                    if (~ismember(struct('edge',[v_best,w],'cost',[]), Tree.E)) && cost.g_(v_best)+cost.c_(v_best,w)<cost.gT(w, Tree) && cost.g_(v_best)+cost.c(v_best,w)+cost.h_(w)<X_flags.c_sol
-                        Q.E = {Q.E, struct('edge',[v_best,w],'cost',cost.gT(v_best, Tree)+cost.c_(v_best,w)+cost.h_(w))};
+                    if (~ismember(struct('edge',[v_best,w],'cost',[]), Tree.E)) && obj.cost.g_(v_best)+obj.cost.c_(v_best,w)<obj.cost.gT(w, Tree) && obj.cost.g_(v_best)+obj.cost.c(v_best,w)+obj.cost.h_(w)<X_flags.c_sol
+                        Q.E = {Q.E, struct('edge',[v_best,w],'cost',obj.cost.gT(v_best, Tree)+obj.cost.c_(v_best,w)+obj.cost.h_(w))};
                     end
                 end
             end
@@ -235,7 +235,7 @@ classdef BIT_star
 
             % Line 2-4
             % The best edge in the edge queue cannot improve the solution
-            if cost.gT(v_best, Tree) + cost.c_(v_best, x_best) + cost.h_(x_best) >= X_flags.c_sol
+            if obj.cost.gT(v_best, Tree) + obj.cost.c_(v_best, x_best) + obj.cost.h_(x_best) >= X_flags.c_sol
                 Q.E = [];
                 Q.V = [];
                 return;
@@ -245,13 +245,13 @@ classdef BIT_star
             % x_best is unconnected
             if ismember(x_best, X_ncon)
                 % Adds x_best to the tree
-                if cost.g_(v_bst)+cost.c_(v_best, x_best)+cost.h_(x_best) < X_flags.c_sol
+                if obj.cost.g_(v_bst)+obj.cost.c_(v_best, x_best)+obj.cost.h_(x_best) < X_flags.c_sol
                     % X_ncon中去除x_best
                     X_ncon = X_ncon(~ismember(X_ncon, x_best));
                     % Tree.V <-+ x_best
                     Tree.V = {Tree.V, x_best};
                     % Tree.E <-+ (v_best, x_best)
-                    Tree.E = {Tree.E, struct('edge',[v_best, x_best],'cost',cost.gT(v_best, Tree)+cost.c_(v_best, x_best)+cost.h_(x_best))};
+                    Tree.E = {Tree.E, struct('edge',[v_best, x_best],'cost',obj.cost.gT(v_best, Tree)+obj.cost.c_(v_best, x_best)+obj.cost.h_(x_best))};
                     % Q.V <-+ x_best
                     Q.V = {Q.V, x_best};
                     if ismember(x_best, X_t)% 实际实现不用集合论 %%%%%%%%%
@@ -259,7 +259,7 @@ classdef BIT_star
                         X_flags.V_sol = {X_flags.V_sol, x_best};
                         % X_flags.c_sol <-+ minv_sol∈V_sol gT(v_sol)
                         for i = 1:length(X_flags.V_sol)
-                            gTV_sol = {gTV_sol, cost.gT(X_flags.V_sol(i), Tree)};
+                            gTV_sol = {gTV_sol, obj.cost.gT(X_flags.V_sol(i), Tree)};
                         end
                         X_flags.c_sol = min(gTV_sol);
                     end
@@ -269,17 +269,17 @@ classdef BIT_star
             % x_best is connected
             else
                 % Line 12
-                if cost.gT(v_best, Tree)+cost.c_(v_best, x_best)<cost.gT(x_best, Tree)
+                if obj.cost.gT(v_best, Tree)+obj.cost.c_(v_best, x_best)<obj.cost.gT(x_best, Tree)
                     % Line 13
-                    if cost.gT(v_best, Tree)+cost.c(v_best, x_best)+cost.h_(x_best)<X_flags.c_sol
+                    if obj.cost.gT(v_best, Tree)+obj.cost.c(v_best, x_best)+obj.cost.h_(x_best)<X_flags.c_sol
                         % Line 14
-                        if cost.gT(v_best, Tree)+cost.c(v_best, x_best)<cost.gT(x_best, Tree)
+                        if obj.cost.gT(v_best, Tree)+obj.cost.c(v_best, x_best)<obj.cost.gT(x_best, Tree)
                             % Line 15
                             % Tree.E <-- (Par(x_best), x_best)
                             % Tree.E <-- (v_best, x_best)
                             % 找到x_best在Tree.V中的索引
                             index = find(cellfun(@(x) isequal(x, x_best), Tree.V));
-                            Tree.E(index) = struct('edge',[v_best, x_best],'cost',cost.gT(v_best, Tree)+cost.c(v_best, x_best));
+                            Tree.E(index) = struct('edge',[v_best, x_best],'cost',obj.cost.gT(v_best, Tree)+obj.cost.c(v_best, x_best));
 
                             % Line 16
                             % c_sol <- minv_sol∈V_sol gT(v_sol)
@@ -352,7 +352,7 @@ classdef BIT_star
                 current_node = father_node;
             end
         end
-        function x = PopBest(Q, name)
+        function x = PopBest(obj, Q, name)
             % [II.B Definiton 12]
             % Finds the element with the lowest cost in the queue Q_i and removes it.
             % And returns the element.
@@ -360,7 +360,7 @@ classdef BIT_star
             % 输入：Q_i - 优先队列Q_E或Q_V
             % 输出：x - 最优节点
             if(name == 'V')
-                [~, index] = min(cost.gT(Q.V, obj.Tree)+cost.h_(Q.V));% 待确认
+                [~, index] = min(obj.cost.gT(Q.V, obj.Tree)+obj.cost.h_(Q.V));% 待确认
                 x = Q.V(index);
                 Q.V(index) = [];
                 Q.V = Q.V(~cellfun('isempty',Q.V));% 去除空元素
