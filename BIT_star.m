@@ -102,11 +102,11 @@ classdef BIT_star
                     % Add new samples to queues
                     % 在X_ncon中加入X_new和X_reuse的交集
                     obj.X_ncon = {X_ncon, intersect(X_reuse, X_new)};
-                    obj.Q.V = {Q.V, obj.Tree.V};
+                    obj.Q.V = obj.Tree.V;
 
                 % Line 13
                 % Process best vertex available
-                elseif cost.BestValue(Q, 'V') <= cost.BestValue(Q, 'E') 
+                elseif cost.BestValue(Q, 'V') <= cost.BestValue(Q, 'E')
                     obj.Q, obj.X_flags = ExpVertex(obj.Tree, obj.Q, obj.X_ncon, obj.X_flags);
 
                 % Line 15
@@ -118,7 +118,9 @@ classdef BIT_star
 
             % Line 18
             % Solution(arg minv_t∈V_sol gT(v_t))
-            X_sol = Solution()
+            gTV_sol = arrayfun(@(v) cost.gT(v, Tree), X_flags.V_sol);% V_sol定义待实现
+            [~, index] = min(gTV_sol);
+            X_sol = Solution(X_flags.V_sol(index));
 
         end % BIT_star end
         function [X_reuse, Tree, X_ncon, X_flags] = Prune(Tree, X_ncon, X_flags)
@@ -189,16 +191,14 @@ classdef BIT_star
             % (v_best, x)表示一条从v_best到x的边  
             for i = 1:length(X_near)
                 x = X_near(i);
-                Cost = cost.g_(v_best)+cost.c_(v_best,x)+cost.h_(x);%% 代写完整的cost函数
-                if Cost < X_flags.c_sol
+                if cost.g_(v_best)+cost.c_(v_best,x)+cost.h_(x) < X_flags.c_sol
                     Q.E = {Q.E, struct('edge',[v_best,x],'cost',cost.gT(v_best, Tree)+cost.c_(v_best,x)+cost.h_(x))};% adds edges
                 end
             end
 
             % Line 8-10
             if ~ismember(v_best, X_flags.V_rewire) && X_flags.V_rewire.c_sol < inf
-                % v_best是否已经不在重连顶点集合 XOR 至少找到了一个解
-                % 以下条件仅一个为真时成立：1.v_best之前没有考虑过重连，第一个解尚未找到 2.v_best之前考虑过重连，但是此时已经有一个解了
+                % v_best是否已经不在重连顶点集合 AND 至少找到了一个解
                 % 作用：在还没有找到任何解的情况下，算法会跳过重连操作，以更快地找到第一个解。一旦找到第一个解，算法则会考虑之前跳过的重连操作，以进一步优化和改进找到的解。
                 % When v_best might be a better parent for its neighbors than their current parent.
                 % Skip any potential rewirings.
@@ -235,7 +235,7 @@ classdef BIT_star
 
             % Line 2-4
             % The best edge in the edge queue cannot improve the solution
-            if cost.g_(v_best) + cost.c_(v_best, x_best) + cost.h_(x_best) >= X_flags.c_sol
+            if cost.gT(v_best, Tree) + cost.c_(v_best, x_best) + cost.h_(x_best) >= X_flags.c_sol
                 Q.E = [];
                 Q.V = [];
                 return;
@@ -259,7 +259,7 @@ classdef BIT_star
                         X_flags.V_sol = {X_flags.V_sol, x_best};
                         % X_flags.c_sol <-+ minv_sol∈V_sol gT(v_sol)
                         for i = 1:length(X_flags.V_sol)
-                            gTV_sol = {gTV_sol, gT(X_flags.V_sol(i), Tree)};
+                            gTV_sol = {gTV_sol, cost.gT(X_flags.V_sol(i), Tree)};
                         end
                         X_flags.c_sol = min(gTV_sol);
                     end
@@ -312,7 +312,7 @@ classdef BIT_star
             % X_near <- near(x, X_search)
             % 输入：v-顶点
             %      X_search-搜索空间
-            r = 0.1;
+            r = 1;
             X_near = [];
             x = v;
             distance = sqrt((x(1)-X_search(:,2)).^2+(x(2)-X_search(:,2)).^2+(x(3)-X_search(:,3)).^2);
@@ -360,7 +360,7 @@ classdef BIT_star
             % 输入：Q_i - 优先队列Q_E或Q_V
             % 输出：x - 最优节点
             if(name == 'V')
-                [~, index] = min(cost.g_(Q.V)+cost.h_(Q.V));% 待确认
+                [~, index] = min(cost.gT(Q.V, obj.Tree)+cost.h_(Q.V));% 待确认
                 x = Q.V(index);
                 Q.V(index) = [];
                 Q.V = Q.V(~cellfun('isempty',Q.V));% 去除空元素

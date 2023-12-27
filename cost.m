@@ -37,7 +37,9 @@ classdef cost
                 gT = 0;
                 return;
             end
-
+            if ~ismember(Tree.V, current_node)
+                error('gT路径不存在');% 如果路径不存在，则抛出错误。
+            end
             % 找到当前节点的父节点。假设父节点存储在边的第一个元素中。
             % 注意：这里假设每个节点只有一个父节点。
             edge = Tree.E{ismember(Tree.V, current_node)};
