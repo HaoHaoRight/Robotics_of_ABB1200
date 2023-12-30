@@ -183,7 +183,7 @@ classdef BIT_star
             % Make edges to unconnected samples
 
             % Line 2-6
-            if ~ismember(v_best, X_flags.V_exp)
+            if ~ismember(v_best, cell2mat(X_flags.V_exp))
                 X_flags.V_exp = {X_flags.V_exp, v_best};
                 X_near = findNear(v_best, X_ncon);
             else % v_best has been expanded before
@@ -202,7 +202,7 @@ classdef BIT_star
             end
 
             % Line 8-10
-            if ~ismember(v_best, X_flags.V_rewire) && X_flags.V_rewire.c_sol < inf
+            if ~ismember(v_best, cell2mat(X_flags.V_rewire)) && X_flags.V_rewire.c_sol < inf
                 % v_best是否已经不在重连顶点集合 AND 至少找到了一个解
                 % 作用：在还没有找到任何解的情况下，算法会跳过重连操作，以更快地找到第一个解。一旦找到第一个解，算法则会考虑之前跳过的重连操作，以进一步优化和改进找到的解。
                 % When v_best might be a better parent for its neighbors than their current parent.
@@ -248,7 +248,7 @@ classdef BIT_star
 
             % Line 5-10
             % x_best is unconnected
-            if ismember(x_best, X_ncon)
+            if ismember(x_best, cell2mat(X_ncon))
                 % Adds x_best to the tree
                 if obj.cost.g_(v_bst)+obj.cost.c_(v_best, x_best)+obj.cost.h_(x_best) < X_flags.c_sol
                     % X_ncon中去除x_best
