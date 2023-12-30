@@ -4,12 +4,6 @@ classdef BIT_star
    % 重要区别：x是点坐标，v是顶点(vertex)
    % 大写是集合，小写是元素
    
-   %% TODO
-   % 1. 代价函数cost待实现 x
-   % 2. randSample(obj, m)待实现
-   % 3. rewire操作待实现 ？
-   % 4. 变量X_t,在代码实现上要用x_goal的邻域进行判断
-   % 5. PopBest(Q, name)比best的标准在论文里已经给出 x
    %% 【数据结构】
    % 坐标矩阵:x/v = [x;y;z]列向量
    % 边(edge)结构体：e = struct('edge',[v,x],'cost',cost)，其中father是父节点，cost是边代价
@@ -47,7 +41,7 @@ classdef BIT_star
     end
     
     methods
-        function X_sol = BIT_star(start, goal, obstacle)
+        function obj = BIT_star(start, goal, obstacle)
             % Algorithm 1
             % 构造函数，初始化算法
             % 输入：x_root-根节点
@@ -71,27 +65,31 @@ classdef BIT_star
             obj.Q.E = {struct('edge',[],'cost',inf)};% edge queue
 
             % Line 3-6
-            obj.X_flags = struct('X_new',{[]},'V_exp',{[]},'V_rewire',{[]},'V_sol',{[]},'c_sol',{[]});
-            obj.X_ncon = obj.X_goal;% 尚未连接到树中的节点
-            obj.X_flags.X_new = obj.X_ncon;
+            obj.X_flags = struct('X_new',{[]},'V_exp',{[]},'V_rewire',{[]},'V_sol',{[]},'c_sol',[]);
+            obj.X_ncon = {obj.X_goal};% 尚未连接到树中的节点
+            obj.X_flags.X_new = {obj.X_ncon};
             obj.X_flags.c_sol = inf;
-            obj.X_flags.V_sol = obj.X_goal;
+            obj.X_flags.V_sol = {obj.X_goal};
+            obj.X_flags.V_exp = {};
+            obj.X_flags.V_rewire = {};
 
-            % Line 5
-            if isempty(obj.X_flags.V_sol)
-                obj.X_flags.c_sol = inf;
-            else
-                % c_sol <- minv∈V_sol gT(v) 待优化
-                gTV = [];
-                for i = 1:numel(obj.X_flags.V_sol)
-                    gTV = [gTV, obj.cost.gT(obj.X_flags.V_sol, obj.Tree)];%gT待实现
-                end
-                obj.X_flags.c_sol = min(gTV);%gT待实现
-            end
+        end
 
+        function X_sol = BIT(obj)
             % Line 7-17
             % 待定义stop条件
             while 1
+                % Line 5
+                if isempty(obj.X_flags.V_sol)
+                    obj.X_flags.c_sol = inf;
+                else
+                    % c_sol <- minv∈V_sol gT(v) 待优化
+                    gTV = [];
+                    for i = 1:numel(obj.X_flags.V_sol)
+                        gTV = [gTV, obj.cost.gT(obj.X_flags.V_sol, obj.Tree)];%gT待实现
+                    end
+                    obj.X_flags.c_sol = min(gTV);
+                end
                 % Line 8
                 % Prune sub-optimal nodes
                 if isempty(obj.Q.V) && isempty(obj.Q.E) % End of batch
@@ -179,16 +177,16 @@ classdef BIT_star
             %      X_flags- X_flags≡(X_new,V_exp,V_rewire,V_sol,c_sol)
 
             % Line 1
-            v_best = PopBest(Q, 'V');
+            v_best = obj.PopBest(Q, 'V');
             % Make edges to unconnected samples
 
             % Line 2-6
             if ~any(cellfun(@(a) isequal(a, v_best), X_flags.V_exp))
                 X_flags.V_exp = [X_flags.V_exp, v_best];
-                X_near = findNear(v_best, X_ncon);
+                X_near = obj.findNear(v_best, cell2mat(X_ncon));
             else % v_best has been expanded before
                 X_search = cell2mat(intersect(X_flags.X_new, X_ncon));
-                X_near = findNear(v_best, X_search);
+                X_near = obj.findNear(v_best, X_search);
             end
 
             % Line 7
@@ -210,7 +208,7 @@ classdef BIT_star
 
                 % Line 9
                 X_flags.V_rewire{end+1} = v_best;
-                X_search = cell2mat(Tree.V); % X_search is a matrix
+                X_search = cell2mat(cell2mat(Tree.V)); % X_search is a matrix
 
                 % Line 10
                 X_flags.V_near = findNear(v_best, X_search);% Finds all vertes in the serach tree that are near v_best
@@ -368,13 +366,20 @@ classdef BIT_star
             % PopBest - 从优先队列中弹出最优节点。
             % 输入：Q_i - 优先队列Q_E或Q_V
             % 输出：x - 最优节点
+            BestValue = [];
             if(name == 'V')
-                [~, index] = min(obj.cost.gT(Q.V, obj.Tree)+obj.cost.h_(Q.V));% 待确认
+                for i=1:numel(Q.V)
+                    BestValue = [BestValue obj.cost.gT(Q.V{i}, obj.Tree)+obj.cost.h_(Q.V{i})];
+                end
+                [~, index] = min(BestValue);% 待确认
                 x = Q.V{index};
                 Q.V{index} = [];
                 Q.V = Q.V(~cellfun('isempty',Q.V));% 去除空元素
             end
             if(name == 'E')
+                for i=1:numel(Q.E)
+                    BestValue = [BestValue Q.E.cost];
+                end
                 index = find(cellfun(@(x) x.cost, Q.E) == min(cellfun(@(x) x.cost, Q.E)));
                 x = [Q.E{index}.edge];
                 Q.E{index} = [];
