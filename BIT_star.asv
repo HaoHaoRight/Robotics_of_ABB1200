@@ -68,7 +68,7 @@ classdef BIT_star
             %Line 2
             obj.Q = struct('V',{[]},'E',{[]});% 优先队列(queue)
             obj.Q.V = {obj.x_root};% vertex queue
-            obj.Q.E = {struct('edge',[],'cost',[])};% edge queue
+            obj.Q.E = {struct('edge',[],'cost',inf)};% edge queue
 
             % Line 3-6
             obj.X_flags = struct('X_new',{[]},'V_exp',{[]},'V_rewire',{[]},'V_sol',{[]},'c_sol',{[]});
@@ -82,34 +82,34 @@ classdef BIT_star
                 obj.X_flags.c_sol = inf;
             else
                 % c_sol <- minv∈V_sol gT(v) 待优化
-                gTV = {};
+                gTV = [];
                 for i = 1:numel(obj.X_flags.V_sol)
-                    gTV = {gTV, obj.cost.gT(obj.X_flags.V_sol, obj.Tree)};%gT待实现
+                    gTV = [gTV, obj.cost.gT(obj.X_flags.V_sol, obj.Tree)];%gT待实现
                 end
                 obj.X_flags.c_sol = min(gTV);%gT待实现
             end
 
             % Line 7-17
             % 待定义stop条件
-            while stop
+            while 1
                 % Line 8
                 % Prune sub-optimal nodes
-                if isempty(Q.V) && isempty(Q.E) % End of batch
+                if isempty(obj.Q.V) && isempty(obj.Q.E) % End of batch
                     % Line 9-12
                     % Prune sub-optimal nodes
                     X_reuse, obj.Tree, obj.X_ncon, obj.X_flags = Prune(obj.Tree, obj.X_ncon, obj.X_flags);
                     % Generate new batch of samples
-                    X_new = randSample(1000, obj.obstacle); %%%%%%%%%%%% 没写
-                    obj.X_t = initXt(X_new, X_goal, obj.obstacle);
+                    X_new = randSample(1000, obj.obstacle);
+                    obj.X_t = initXt(X_new, obj.X_goal, obj.obstacle);
                     % Add new samples to queues
                     % 在X_ncon中加入X_new和X_reuse的交集
-                    obj.X_ncon = {X_ncon, intersect(X_reuse, X_new)};
+                    obj.X_ncon = [obj.X_ncon, intersect(X_reuse, X_new)];
                     obj.Q.V = obj.Tree.V;
                     
                 % Line 13
                 % Process best vertex available
-                elseif obj.cost.BestValue(Q, 'V') <= obj.cost.BestValue(Q, 'E')
-                    obj.Q, obj.X_flags = ExpVertex(obj.Tree, obj.Q, obj.X_ncon, obj.X_flags);
+                elseif obj.cost.BestValue(obj.Q, 'V', obj.Tree) <= obj.cost.BestValue(obj.Q, 'E', obj.Tree)
+                    [obj.Q, obj.X_flags] = obj.ExpVertex(obj.Tree, obj.Q, obj.X_ncon, obj.X_flags);
 
                 % Line 15
                 % Process best edge available
@@ -157,7 +157,7 @@ classdef BIT_star
                     end
                     % If v can possibility help
                     if obj.cost.g_(Tree.V{i}) + obj.cost.h_(Tree.V{i}) < X_flags.c_sol
-                        X_reuse = {X_reuse, Tree.V{i}};
+                        X_reuse = [X_reuse, Tree.V{i}];
                     end
                 end
                 % 去除空元素
@@ -183,8 +183,8 @@ classdef BIT_star
             % Make edges to unconnected samples
 
             % Line 2-6
-            if ~ismember(v_best, cell2mat(X_flags.V_exp))
-                X_flags.V_exp = {X_flags.V_exp, v_best};
+            if ~any(cellfun(@(a) isequal(a, v_best), X_flags.V_exp))
+                X_flags.V_exp = [X_flags.V_exp, v_best];
                 X_near = findNear(v_best, X_ncon);
             else % v_best has been expanded before
                 X_search = cell2mat(intersect(X_flags.X_new, X_ncon));
@@ -197,19 +197,19 @@ classdef BIT_star
             for i = 1:numel(X_near)
                 x = X_near{i};
                 if obj.cost.g_(v_best)+obj.cost.c_(v_best,x)+obj.cost.h_(x) < X_flags.c_sol
-                    Q.E = {Q.E, struct('edge',[v_best,x],'cost',obj.cost.gT(v_best, Tree)+obj.cost.c_(v_best,x)+obj.cost.h_(x))};% adds edges
+                    Q.E{end +1} = struct('edge',[v_best,x],'cost',obj.cost.gT(v_best, Tree)+obj.cost.c_(v_best,x)+obj.cost.h_(x));% adds edges
                 end
             end
 
             % Line 8-10
-            if ~ismember(v_best, cell2mat(X_flags.V_rewire)) && X_flags.V_rewire.c_sol < inf
+            if ~any(cellfun(@(a) isequal(a, v_best), X_flags.V_rewire)) && X_flags.V_rewire.c_sol < inf
                 % v_best是否已经不在重连顶点集合 AND 至少找到了一个解
                 % 作用：在还没有找到任何解的情况下，算法会跳过重连操作，以更快地找到第一个解。一旦找到第一个解，算法则会考虑之前跳过的重连操作，以进一步优化和改进找到的解。
                 % When v_best might be a better parent for its neighbors than their current parent.
                 % Skip any potential rewirings.
 
                 % Line 9
-                X_flags.V_rewire = {X_flags.V_rewire, v_best};
+                X_flags.V_rewire{end+1} = v_best;
                 X_search = cell2mat(Tree.V); % X_search is a matrix
 
                 % Line 10
@@ -220,8 +220,8 @@ classdef BIT_star
                 % Q.E <-+ {(v_best, w), w ∈ V_near|(v_best,w)∈E and g_(v_best)+c_(v_best,w)<gT(w),g_(v_best)+c_(v_best,w)+h_(w)<c_sol}
                 for i = 1:numel(X_flags.V_near)
                     w = X_flags.V_near{i};
-                    if (~ismember(struct('edge',[v_best,w],'cost',[]), Tree.E)) && obj.cost.g_(v_best)+obj.cost.c_(v_best,w)<obj.cost.gT(w, Tree) && obj.cost.g_(v_best)+obj.cost.c(v_best,w)+obj.cost.h_(w)<X_flags.c_sol
-                        Q.E = {Q.E, struct('edge',[v_best,w],'cost',obj.cost.gT(v_best, Tree)+obj.cost.c_(v_best,w)+obj.cost.h_(w))};
+                    if (~any(cellfun(@(a) isequal(a, [v_best,w]), Tree.E.edge))) && obj.cost.g_(v_best)+obj.cost.c_(v_best,w)<obj.cost.gT(w, Tree) && obj.cost.g_(v_best)+obj.cost.c(v_best,w)+obj.cost.h_(w)<X_flags.c_sol
+                        Q.E{end +1} = struct('edge',[v_best,w],'cost',obj.cost.gT(v_best, Tree)+obj.cost.c_(v_best,w)+obj.cost.h_(w));
                     end
                 end
             end
@@ -241,30 +241,30 @@ classdef BIT_star
             % Line 2-4
             % The best edge in the edge queue cannot improve the solution
             if obj.cost.gT(v_best, Tree) + obj.cost.c_(v_best, x_best) + obj.cost.h_(x_best) >= X_flags.c_sol
-                Q.E = [];
-                Q.V = [];
+                Q.E = {};
+                Q.V = {};
                 return;
             end
 
             % Line 5-10
             % x_best is unconnected
-            if ismember(x_best, cell2mat(X_ncon))
+            if any(cellfun(@(a) isequal(a, x_best), X_ncon))
                 % Adds x_best to the tree
                 if obj.cost.g_(v_bst)+obj.cost.c_(v_best, x_best)+obj.cost.h_(x_best) < X_flags.c_sol
                     % X_ncon中去除x_best
-                    X_ncon = X_ncon(~ismember(X_ncon, x_best));
+                    X_ncon = X_ncon(~cellfun(@(x) isequal(x, x_best), X_ncon));
                     % Tree.V <-+ x_best
-                    Tree.V = {Tree.V, x_best};
+                    Tree.V{end+1} = x_best;
                     % Tree.E <-+ (v_best, x_best)
-                    Tree.E = {Tree.E, struct('edge',[v_best, x_best],'cost',obj.cost.gT(v_best, Tree)+obj.cost.c_(v_best, x_best)+obj.cost.h_(x_best))};
+                    Tree.E{end+1} = struct('edge',[v_best, x_best],'cost',obj.cost.gT(v_best, Tree)+obj.cost.c_(v_best, x_best)+obj.cost.h_(x_best));
                     % Q.V <-+ x_best
-                    Q.V = {Q.V, x_best};
-                    if ismember(x_best, obj.X_t)
+                    Q.V{end+1} = x_best;
+                    if any(cellfun(@(x) isequal(x, x_best), obj.X_t))
                         % X_flags.V_sol <-+ x_best
-                        X_flags.V_sol = {X_flags.V_sol, x_best};
+                        X_flags.V_sol{end+1} = x_best;
                         % X_flags.c_sol <-+ minv_sol∈V_sol gT(v_sol)
                         for i = 1:numel(X_flags.V_sol)
-                            gTV_sol = {gTV_sol, obj.cost.gT(X_flags.V_sol{i}, Tree)};
+                            gTV_sol{end+1} = obj.cost.gT(X_flags.V_sol{i}, Tree);
                         end
                         X_flags.c_sol = min(gTV_sol);
                     end
@@ -289,7 +289,7 @@ classdef BIT_star
                             % Line 16
                             % c_sol <- minv_sol∈V_sol gT(v_sol)
                             for i = 1:numel(X_flags.V_sol)
-                                gTV_sol = {gTV_sol, gT(X_flags.V_sol{i}, Tree)};
+                                gTV_sol{end+1} = gT(X_flags.V_sol{i}, Tree);
                             end
                             X_flags.c_sol = min(gTV_sol);
                         end
@@ -328,7 +328,7 @@ classdef BIT_star
             distance = sqrt((x(1)-X_search(:,2)).^2+(x(2)-X_search(:,2)).^2+(x(3)-X_search(:,3)).^2);
             for i = 1:length(distance)
                 if distance(i) < r
-                    X_near = {X_near,X_search(i,:)};
+                    X_near{end+1} = X_search(i,:);
                 end
             end
         end
@@ -392,7 +392,7 @@ classdef BIT_star
             X_t = {X_goal};
             for i = 1:numel(X_sample)
                 if obj.dist(X_sample{i}, obj.X_goal) < 0.05 && ~obstacle.isVectorIntersectingObstacle(X_sample{i}, obj.X_goal)
-                    X_t = {X_t, X_sample{i}};
+                    X_t{end+1} = X_sample{i};
                 end
             end
         end

@@ -110,10 +110,7 @@ classdef costs
             end
             % QE queue cost: gT(v)+c_(v, x)+h_(x)
             if strcmp(name, 'E')
-                for i=1:numel(Q.V)
-                    BestValue = [BestValue Q.E{i}.cost];
-                end
-                BestValue = min(BestValue);
+                BestValue = min(cellfun(@(x) x.cost, Q.E, 'UniformOutput', false));
             end
 
         end
