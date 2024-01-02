@@ -53,8 +53,6 @@ classdef costs
             result = false(size(Tree.V));
             
             % 对 A 中的每个元素进行检查
-
-
             if ~any(cellfun(@(a) isequal(a, current_node), Tree.V))
                 gT = inf;
                 return;
