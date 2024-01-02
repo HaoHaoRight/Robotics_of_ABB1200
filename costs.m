@@ -38,20 +38,20 @@ classdef costs
        end
        
 % gT(x) | 计算根节点通过树Tree到X空间内点x的已发生成本。    
-        function gT = gT(obj, current_node, Tree)
+        function c = gT(obj, current_node, Tree)
             % 计算从树的根节点到当前节点的路径成本。
             % current_node: 当前节点
             % Tree: 包含节点和边的树结构
 
             % 基本情况：如果当前节点是根节点，则成本为 0。
             if isequal(current_node, Tree.V(1,:))
-                gT = 0;
+                c = 0;
                 return;
             end
             
             % 对 A 中的每个元素进行检查
             if ~ismember(current_node, Tree.V, 'rows')
-                gT = inf;
+                c = inf;
                 return;
             end
             parent_node = Tree.E.v(find(Tree.E.x == current_node));
@@ -64,6 +64,13 @@ classdef costs
 
             % 累加父节点的成本和当前边的成本。
             gT = parent_cost + edge_cost;
+
+            if parent_cost == obj.start
+                c = gT;
+                return;
+            else
+                c = inf;
+            end
         end
 
 % g_(x) | 为X空间内点x已经发生的下界估计。   
@@ -108,6 +115,7 @@ classdef costs
                     BestValue = inf;
                 end
                 [BestValue, index] = min(BestValue);
+                index = index(1);
             end
 
         end

@@ -48,7 +48,7 @@ classdef BIT_star_rebuild
                 path = obj.Tree;
             end
             while obj.cost.BestValue(obj.Q,'V',obj.Tree) <= obj.cost.BestValue(obj.Q,'E',obj.Tree)
-
+                obj.ExpandVertex(obj);
             end
         end
 
@@ -76,13 +76,6 @@ classdef BIT_star_rebuild
                 end
             end
             
-            % 清除空行
-            obj.X_samples = obj.X_samples(~isempty(obj.X_samples));
-            obj.Tree.V = obj.Tree.V(~isempty(obj.Tree.V));
-            obj.V_old = obj.V_old(~isempty(obj.V_old));
-            notEmptyRows = ~isempty(obj.Tree.E.v);
-            obj.Tree.E.v = obj.Tree.E.v(notEmptyRows);
-            obj.Tree.E.x = obj.Tree.E.x(notEmptyRows);
         end
 
         function X_samples = Sample(obj, m, c) 
@@ -98,5 +91,74 @@ classdef BIT_star_rebuild
             end
         end
         
+        function ExpandVertex(obj)
+            % [Alg.2]
+            % Pop the best vertex from Q.V
+            [~, index] = obj.cost.BestValue(obj.Q,'V',obj.Tree);
+            v = obj.Q.V(index,:);
+            obj.Q.V(index,:) = [];
+
+            X_near = obj.Near(v, obj.X_samples);
+
+            % QE ←+ (v, x) ∈ (V x X_near) 
+            for i = 1:size(X_near)
+                x = X_near(i,:);
+                for j = 1:size(obj.Tree.V)
+                    v = obj.Tree.V(j,:);
+                    if obj.cost.g_(v)+obj.cost.c_(v,x)+obj.cost.h_(x) < obj.cost.gT(obj.x_goal)
+                        obj.Q.E.v = [obj.Q.E.v; v];
+                        obj.Q.E.x = [obj.Q.E.x; x];
+                    end
+                end
+            end
+
+            if  ~ismember(v, obj.V_old, 'rows')
+                V_near = obj.Near(v, obj.Tree.V);
+                % QE ←+ (v, w) ∈ (V x V_near) 
+                for i = 1:size(V_near)
+                    w = V_near(i,:);
+                    for j = 1:size(obj.Tree.V)
+                        v = obj.Tree.V(j,:);
+                        if ~any(obj.Q.E.x(obj.Q.E.v == v) == w)
+                        % (v, w) ∉ E
+                            if obj.cost.g_(v)+obj.cost.c_(v,w)+obj.cost.h_(w) < obj.cost.gT(obj.x_goal) && obj.cost.gT(v, obj.Tree) + obj.cost.c_(v,w) < obj.cost.gT(w, obj.Tree)
+                                obj.Q.E.v = [obj.Q.E.v; v];
+                                obj.Q.E.x = [obj.Q.E.x; w];
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        function ExpandEdge(obj)
+            % [Alg.2]
+            % Pop the best vertex from Q.V
+            [~, index] = obj.cost.BestValue(obj.Q,'V',obj.Tree);
+            v = obj.Q.V(index,:);
+            obj.Q.V(index,:) = [];
+
+            X_near = obj.Near(v, obj.X_samples);
+
+            % QE ←+ (v, x) ∈ (V x X_near) 
+            for i = 1:size(X_near)
+                x = X_near(i,:);
+                for j = 1:size(obj.Tree.V)
+                    v = obj.Tree.V(j,:);
+                    if obj.cost.g_(v)+obj.cost.c_(v,x)+obj.cost.h_(x) < obj.cost.gT(obj.x_goal)
+                        obj.Q.E.v = [obj.Q.E.v; v];
+                        obj.Q.E.x = [obj.Q.E.x; x];
+                    end
+                end
+            end
+        end
+        function X_near = Near(obj, v, Samples)
+            X_near = [];
+            for i = 1:size(Samples)
+                if norm(Samples(i,:)-v) <= obj.radius
+                    X_near = [X_near; Samples(i,:)];
+                end
+            end
+        end
     end % end methods
 end % end classdef

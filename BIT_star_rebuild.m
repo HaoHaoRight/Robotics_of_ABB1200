@@ -36,19 +36,22 @@ classdef BIT_star_rebuild
             obj.m = m;
         end
         function path = Solution(obj)
-            if isempty(obj.Q.V) && isempty(obj.Q.E.v) && isempty(obj.Q.E.x)
-                % Batch creation
-                Prune(obj, obj.cost.gT(obj.x_goal, obj.Tree));
-                % Prune(gT(x_goal))
-                obj.X_samples = [obj.X_samples; obj.Sample(obj.m, obj.cost.gT(obj.x_goal, obj.Tree))];
-                % Sample(m, gT(x_goal))
-                obj.V_old = obj.Tree.V;
-                obj.Q.V = obj.Tree.V;
-                obj.radius = 10;
-                path = obj.Tree;
-            end
-            while obj.cost.BestValue(obj.Q,'V',obj.Tree) <= obj.cost.BestValue(obj.Q,'E',obj.Tree)
-
+            while obj.cost.gT(obj.x_goal, obj.Tree) < 1.1*norm(obj.x_goal-obj.x_root)
+                if isempty(obj.Q.V) && isempty(obj.Q.E.v) && isempty(obj.Q.E.x)
+                    % Batch creation
+                    Prune(obj, obj.cost.gT(obj.x_goal, obj.Tree));
+                    % Prune(gT(x_goal))
+                    obj.X_samples = [obj.X_samples; obj.Sample(obj.m, obj.cost.gT(obj.x_goal, obj.Tree))];
+                    % Sample(m, gT(x_goal))
+                    obj.V_old = obj.Tree.V;
+                    obj.Q.V = obj.Tree.V;
+                    obj.radius = 10;
+                    path = obj.Tree;
+                end
+                while obj.cost.BestValue(obj.Q,'V',obj.Tree) <= obj.cost.BestValue(obj.Q,'E',obj.Tree)
+                    obj.ExpandVertex();
+                end
+                obj.ExpandEdge();
             end
         end
 
@@ -131,13 +134,46 @@ classdef BIT_star_rebuild
             end
         end
 
-        function X_near = Near(obj, v, Samples)
-            X_near = [];
-            for i = 1:size(Samples)
-                if norm(Samples(i,:)-v) <= obj.radius
-                    X_near = [X_near; Samples(i,:)];
+        function ExpandEdge(obj)
+            % [Alg.2]
+            % Pop the best edge from Q.E
+            [~, index] = obj.cost.BestValue(obj.Q,'E',obj.Tree);
+            v = obj.Q.E.v(index,:);
+            x = obj.Q.E.x(index,:);
+            obj.Q.E.v(index,:) = [];
+            obj.Q.E.x(index,:) = [];
+
+            if obj.cost.gT(v,obj.Tree)+obj.cost.c_(v,x)+obj.cost.h_(x) < obj.cost.gT(obj.x_goal,obj.Tree)
+                if obj.cost.g_(v)+obj.cost.c_(v,x)+obj.cost.h_(x) < obj.cost.gT(obj.x_goal,obj.Tree)
+                    if obj.cost.gT(v,obj.Tree) + obj.cost.c(v,x) < obj.cost.gT(x,obj.Tree)
+                        if ismember(x, obj.Tree.V, 'rows')
+                            % x ∈ V
+                            obj.Tree.E.v(obj.Tree.E.x == x) = [];
+                            obj.Tree.E.x(obj.Tree.E.x == x) = [];
+                        else
+                            % x ∉ V
+                            obj.X_samples(obj.X_samples == x) = [];
+                            obj.Tree.V = [obj.Tree.V; x];
+                            obj.Q.V = [obj.Q.V; x];
+                        end
+                        obj.Tree.E.v = [obj.Tree.E.v; v];
+                        obj.Tree.E.x = [obj.Tree.E.x; x];
+                        for i = 1:size(obj.Q.E.v)
+                            vi = obj.Q.E.v(i,:);
+                            if obj.cost.gT(vi)+obj.cost.c_(vi,x) >= obj.cost.gT(x,obj.Tree)
+                                obj.Tree.E.v(obj.Tree.E.x == x) = [];
+                                obj.Tree.E.x(obj.Tree.E.x == x) = [];
+                            end
+                        end
+                    end
                 end
+            else
+                obj.Q.E.v = [];
+                obj.Q.E.x = [];
+                obj.Q.V = [];
+                % start new batch
             end
         end
+
     end % end methods
 end % end classdef
