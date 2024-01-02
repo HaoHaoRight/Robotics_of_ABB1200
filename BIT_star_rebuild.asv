@@ -1,0 +1,102 @@
+classdef BIT_star_rebuild
+    % 定义所有向量为行向量(i,:)
+    % Tree = (V, E)
+    % Q = (V, E)
+    % V = {v}
+    % E = {(v,x)}
+    % 长度用size()
+    properties
+        Tree;
+        Q;
+        V_old;
+        cost;
+        obstacle;
+        x_root;
+        x_goal;
+        X_samples;% The set of unconnected samples
+        demension;
+        radius;
+        m;
+    end % end properties
+    methods
+        function obj = BIT_star_rebuild(obstacle, x_root, x_goal, demension, m)
+            obj.obstacle = obstacle;
+            obj.x_root = x_root;
+            obj.x_goal = x_goal;
+            obj.cost = costs(obj.x_root, obj.x_goal, obj.obstacle);
+            obj.demension = demension;
+            obj.Tree = struct('V',[],'E',[]);
+            obj.Tree.E = struct('v',[],'x',[]);
+            obj.Tree.V = [obj.x_root];
+            obj.Q = struct('V',[],'E',[]);
+            obj.Q.V = [];
+            obj.Q.E = struct('v',[],'x',[]);
+            obj.X_samples = [obj.x_goal];
+            obj.V_old = [];
+            obj.m = m;
+        end
+        function path = Solution(obj)
+            if isempty(obj.Q.V) && isempty(obj.Q.E.v) && isempty(obj.Q.E.x)
+                % Batch creation
+                Prune(obj, obj.cost.gT(obj.x_goal, obj.Tree));
+                % Prune(gT(x_goal))
+                obj.X_samples = [obj.X_samples; obj.Sample(obj.m, obj.cost.gT(obj.x_goal, obj.Tree))];
+                % Sample(m, gT(x_goal))
+                obj.V_old = obj.Tree.V;
+                obj.Q.V = obj.Tree.V;
+                obj.radius = 10;
+                path = obj.Tree;
+            end
+            while obj.cost.BestValue(obj.Q,'V',obj.Tree) <= obj.cost.BestValue(obj.Q,'E',obj.Tree)
+
+            end
+        end
+
+        function Prune(obj, c)
+            % Prune the tree (g_(x)+h_(x) > c)
+            for i = 1:size(obj.X_samples)
+                if obj.cost.g_(obj.X_samples(i,:))+obj.cost.h_(obj.X_samples(i,:)) > c
+                    obj.X_samples(i,:) = [];
+                end
+            end
+            for i = 1:size(obj.Tree.V)
+                if obj.cost.g_(obj.Tree.V(i,:))+obj.cost.h_(obj.Tree.V(i,:)) > c
+                    obj.Tree.V(i,:) = [];
+                end
+            end
+            for i = 1:size(obj.Tree.E.v)
+                if obj.cost.g_(obj.Tree.E.v(i,:))+obj.cost.h_(obj.Tree.E.v(i,:)) > c
+                    obj.Tree.E.v(i,:) = [];
+                    obj.Tree.E.x(i,:) = [];
+                end
+            end
+            for i = 1:size(obj.V_old)
+                if obj.cost.g_(obj.V_old(i,:))+obj.cost.h_(obj.V_old(i,:)) > c
+                    obj.V_old(i,:) = [];
+                end
+            end
+            
+            % 清除空行
+            obj.X_samples = obj.X_samples(~isempty(obj.X_samples));
+            obj.Tree.V = obj.Tree.V(~isempty(obj.Tree.V));
+            obj.V_old = obj.V_old(~isempty(obj.V_old));
+            notEmptyRows = ~isempty(obj.Tree.E.v);
+            obj.Tree.E.v = obj.Tree.E.v(notEmptyRows);
+            obj.Tree.E.x = obj.Tree.E.x(notEmptyRows);
+        end
+
+        function X_samples = Sample(obj, m, c) 
+            % 拒绝采样版本
+            X_samples = zeros(m, obj.demension);
+            count = 1;
+            while count <= m
+                rand_point = rand(1,obj.demension); % 生成随机点（n维行向量）
+                if norm(rand_point-obj.x_root) + norm(rand_point-obj.x_goal) <= c && ~obj.obstacle.isVectorIntersectingObstacle(rand_point, obj.x_goal)
+                    X_samples(count, :) = rand_point; % 添加行向量到矩阵
+                    count = count + 1;
+                end
+            end
+        end
+        
+    end % end methods
+end % end classdef

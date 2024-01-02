@@ -44,27 +44,17 @@ classdef costs
             % Tree: 包含节点和边的树结构
 
             % 基本情况：如果当前节点是根节点，则成本为 0。
-            if isequal(current_node, Tree.V{1})
+            if isequal(current_node, Tree.V(1,:))
                 gT = 0;
                 return;
             end
-
-            % 初始化一个逻辑数组来存储结果
-            result = false(size(Tree.V));
             
             % 对 A 中的每个元素进行检查
-            if ~any(cellfun(@(a) isequal(a, current_node), Tree.V))
+            if ~ismember(current_node, Tree.V, 'rows')
                 gT = inf;
                 return;
             end
-            % 找到当前节点的父节点。假设父节点存储在边的第一个元素中。
-            % 注意：这里假设每个节点只有一个父节点。
-            for i = 1:numel(Tree.E)
-                if (isequal(Tree.E{i}.edge(2),current_node))
-                    parent_node = Tree.E{i}.edge(1);
-                    break;
-                end
-            end    
+            parent_node = Tree.E.v(find(Tree.E.x == current_node));
             
             % 计算从父节点到当前节点的成本。
             edge_cost = norm(current_node - parent_node);
@@ -95,23 +85,29 @@ classdef costs
 % 定义 11 (cost ← BestValue(Qi))：查找 Qi 中队列成本最低的元素，并返回该元素的队列成本。    
 % Definition 11  (cost ← BestValue(Qi)) 
 % Finds the elementin Qi with the lowest queue cost and returns the queue cost of that element.
-        function BestValue = BestValue(obj, Q, name, Tree)
+        function [BestValue, index] = BestValue(obj, Q, name, Tree)
             % Q:队列，name:队列名称
 
             % QV queue cost: gT(v)+h_(v)
             BestValue = [];
             if strcmp(name, 'V')
-                for i=1:numel(Q.V)
-                    BestValue = [BestValue obj.gT(Q.V{i}, Tree)+obj.h_(Q.V{i})];
+                for i=1:size(Q.V)
+                    BestValue = [BestValue obj.gT(Q.V(i,:), Tree)+obj.h_(Q.V(i,:))];
                 end
-                BestValue = min(BestValue);
+                if isempty(BestValue)
+                    BestValue = inf;
+                end
+                [BestValue, index] = min(BestValue);
             end
             % QE queue cost: gT(v)+c_(v, x)+h_(x)
             if strcmp(name, 'E')
-                for i=1:numel(Q.V)
-                    BestValue = [BestValue Q.E{i}.cost];
+                for i=1:size(Q.E.v)
+                    BestValue = [BestValue obj.gT(Q.E.v(i,:), Tree)+obj.c_(Q.E.v(i,:),Q.E.x(i,:))+obj.h_(Q.E.x(i,:))];
                 end
-                BestValue = min(BestValue);
+                if isempty(BestValue)
+                    BestValue = inf;
+                end
+                [BestValue, index] = min(BestValue);
             end
 
         end
