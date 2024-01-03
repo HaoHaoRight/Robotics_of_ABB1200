@@ -31,11 +31,13 @@
 
    9. **while** BestValue(Q_V) <= BestValue(Q_E)
 
-      %  *Batch creation*
+      %  *Vertex Expansion*
 
-      10. ExpandVertex()
+      10. **ExpandVertex**()
 
-   11. ExpandEdge()
+   %  *Edge Expansion*
+
+   11. **ExpandEdge**()
 
 12. **until** STOP
 13. **return** T
