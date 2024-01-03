@@ -6,6 +6,12 @@
 4. 向量为行向量
 5. 存入向量使用(i,:)
 
+## TODO
+
+1. 搜索半径r
+2. 检查隐藏bug
+3. 优化速度
+
 ## Algorithm 1:BIT*
 
 1. V <- {x_strat}; E <- {}; X_sample <- {x_goal};
