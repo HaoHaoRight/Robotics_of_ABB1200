@@ -52,6 +52,7 @@ classdef BIT_star_rebuild
                     obj.Q.V = obj.Tree.V;
                     obj.radius = 0.08;
                 end
+                Q_BestValue
                 while obj.cost.BestValue(obj.Q,'V',obj.Tree) <= obj.cost.BestValue(obj.Q,'E',obj.Tree) && ~isempty(obj.Q.V)
                     obj = obj.ExpandVertex();
                 end
@@ -64,7 +65,7 @@ classdef BIT_star_rebuild
                     fprintf('Now cost = %f\n', cost_new);
                     percent_change = abs((obj.cost_old - cost_new) / obj.cost_old)*100;
                     fprintf('Cost Change Rate = %f %%\n', percent_change);
-                    if cost_new < 0.541
+                    if cost_new < 0.525
                     %if percent_change < 0.03  % 阈值
                         path = obj.Path();
                         break
@@ -121,16 +122,22 @@ classdef BIT_star_rebuild
             obj.Tree.V(del_idx_Tree_V,:) = [];
         end
 
-        function Samples = Sample(obj, m, c) 
+        function Samples = Sample(obj, m, c)
             % 拒绝采样版本
             Samples = zeros(m, obj.demension);
             dem = obj.demension;
             root = obj.x_root;
             goal = obj.x_goal;
-            for i = m
-                rand_point = rand(1,dem); % 生成随机点（n维行向量）
-                if norm(rand_point-root) + norm(rand_point-goal) <= c && ~obj.obstacle.isPointInside(rand_point)
-                    Samples(i, :) = rand_point; % 添加行向量到矩阵
+            obs = obj.obstacle;
+            % 使用 parfor 生成样本
+            parfor i = 1:m
+                valid_sample = false;
+                while ~valid_sample
+                    rand_point = rand(1, dem); % 生成随机点（n维行向量）
+                    if norm(rand_point-root) + norm(rand_point-goal) <= c && ~obs.isPointInside(rand_point)
+                        Samples(i, :) = rand_point; % 添加行向量到矩阵
+                        valid_sample = true;
+                    end
                 end
             end
         end
@@ -244,7 +251,7 @@ classdef BIT_star_rebuild
             grid on;
             plot3(obj.X_samples(:,1), obj.X_samples(:,2), obj.X_samples(:,3), 'b.');
             title('Batch',batch_count);
-            view(60, 30);
+            view(30, 30);
             hold off;
         end  
     end % end methods

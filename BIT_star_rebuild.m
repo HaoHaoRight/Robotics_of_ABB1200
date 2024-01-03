@@ -52,11 +52,14 @@ classdef BIT_star_rebuild
                     obj.Q.V = obj.Tree.V;
                     obj.radius = 0.08;
                 end
-                while obj.cost.BestValue(obj.Q,'V',obj.Tree) <= obj.cost.BestValue(obj.Q,'E',obj.Tree) && ~isempty(obj.Q.V)
-                    obj = obj.ExpandVertex();
+                [QV_BestValue, QV_BestIndex] = obj.cost.BestValue(obj.Q,'V',obj.Tree);
+                [QE_BestValue, QE_BestIndex] = obj.cost.BestValue(obj.Q,'E',obj.Tree);
+                while QV_BestValue <= QE_BestValue && ~isempty(obj.Q.V)
+                    obj = obj.ExpandVertex(QV_BestIndex);
+                    QV_BestValue = obj.cost.BestValue(obj.Q,'V',obj.Tree);
                 end
                 if ~isempty(obj.Q.E.v)
-                    obj = obj.ExpandEdge();
+                    obj = obj.ExpandEdge(QE_BestIndex);
                 end
 
                 cost_new = obj.cost.gT(obj.x_goal, obj.Tree);
@@ -64,7 +67,7 @@ classdef BIT_star_rebuild
                     fprintf('Now cost = %f\n', cost_new);
                     percent_change = abs((obj.cost_old - cost_new) / obj.cost_old)*100;
                     fprintf('Cost Change Rate = %f %%\n', percent_change);
-                    if cost_new < 0.541
+                    if cost_new < 0.525
                     %if percent_change < 0.03  % 阈值
                         path = obj.Path();
                         break
@@ -141,10 +144,10 @@ classdef BIT_star_rebuild
             end
         end
         
-        function obj = ExpandVertex(obj)
+        function obj = ExpandVertex(obj, QV_BestIndex)
             % [Alg.2]
             % Pop the best vertex from Q.V
-            [~, index] = obj.cost.BestValue(obj.Q,'V',obj.Tree);
+            index = QV_BestIndex;
             v = obj.Q.V(index,:);
             obj.Q.V(index,:) = [];
 
@@ -175,10 +178,10 @@ classdef BIT_star_rebuild
             end
         end
 
-        function obj = ExpandEdge(obj)
+        function obj = ExpandEdge(obj, QE_BestIndex)
             % [Alg.2]
             % Pop the best edge from Q.E
-            [~, index] = obj.cost.BestValue(obj.Q,'E',obj.Tree);
+            index = QE_BestIndex;
             v = obj.Q.E.v(index,:);
             x = obj.Q.E.x(index,:);
             obj.Q.E.v(index,:) = [];
@@ -250,7 +253,7 @@ classdef BIT_star_rebuild
             grid on;
             plot3(obj.X_samples(:,1), obj.X_samples(:,2), obj.X_samples(:,3), 'b.');
             title('Batch',batch_count);
-            view(60, 30);
+            view(80, 30);
             hold off;
         end  
     end % end methods
