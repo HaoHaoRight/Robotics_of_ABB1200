@@ -1,4 +1,4 @@
-classdef costs
+classdef costs < handle
     % [II.B Definition 1-5] 成本函数
     % c(x,y) | 计算X空间内点x到y的路径长度。如果阻塞则返回无穷大，或者路径不存在。
     % c_(x,y) | 计算X空间内点y∈X_i的路径成本的下界估计。c_不考虑障碍物。使用欧几里得距离定义为 c_(x,y):=∥x−y∥。
@@ -10,6 +10,8 @@ classdef costs
         start;
         goal;
         obstacle;
+        Tree_old;
+        Cache;
     end
 
     methods
@@ -35,28 +37,42 @@ classdef costs
             % 计算X空间内点y∈X_i的路径成本的下界估计。c_不考虑障碍物。
             % 使用欧几里得距离定义为 c_(x,y):=∥x−y∥。
             pathLengthlowCost = norm(x - y); % 使用欧几里得距离作为路径成本的下界估计
-       end
-       
-% gT(x) | 计算根节点通过树Tree到X空间内点x的已发生成本。    
+        end
+
+        % gT(x) | 计算根节点通过树Tree到X空间内点x的已发生成本。
         function gT = gT(obj, current_node, Tree)
             % 计算从树的根节点到当前节点的路径成本。
             % current_node: 当前节点
             % Tree: 包含节点和边的树结构
+            % 检查缓存
+
+            % 将当前节点转换为字符串以用作缓存键
+            % node_key = matlab.lang.makeValidName(num2str(current_node));
+            % 
+            % if isequal(obj.Tree_old, Tree) && isfield(obj.Cache, node_key)
+            %     gT = obj.Cache.(node_key);
+            %     return;
+            % end
+            % 检查当前节点是否为空或不在树中
+            if isempty(current_node) || ~ismember(current_node, Tree.V, 'rows')
+                gT = inf;
+                return;
+            end
+
+            % 如果当前节点是根节点
             if isequal(current_node, Tree.V(1,:))
                 gT = 0;
                 return;
             end
-            if isempty(current_node)
-                gT = inf;
-                return;
-            end
-            % 对 A 中的每个元素进行检查
-            if ~ismember(current_node, Tree.V, 'rows')
-                gT = inf;
-                return;
-            end
+
+            % 查找父节点
             parent_node = Tree.E.v(ismember(Tree.E.x, current_node, "rows"),:);
-            
+
+            % 如果没有找到父节点（这意味着当前节点不是根节点但也没有父节点）
+            if isempty(parent_node)
+                gT = inf;
+                return;
+            end
             % 计算从父节点到当前节点的成本。
             edge_cost = norm(current_node - parent_node);
 
@@ -65,6 +81,9 @@ classdef costs
 
             % 累加父节点的成本和当前边的成本。
             gT = parent_cost + edge_cost;
+
+            % obj.Cache.(node_key) = gT;
+            % obj.Tree_old = Tree;
         end
 
 % g_(x) | 为X空间内点x已经发生的下界估计。   

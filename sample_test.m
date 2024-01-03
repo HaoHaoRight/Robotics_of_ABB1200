@@ -10,7 +10,7 @@ le = 0.1; % 立方体的长度
 width = 0.2;  % 立方体的宽度
 height = 0.1; % 立方体的高度
 obstacle = Obstacle(center, le, width, height);
-bit = BIT_star_rebuild(obstacle, x_root, x_goal ,3 , 5000);
+bit = BIT_star_rebuild(obstacle, x_root, x_goal ,3 , 2500);
 path = bit.Solution();
 % % % 测试 randSample 函数
 % m = 2500; % 采样点个数
