@@ -189,7 +189,6 @@ classdef BIT_star_rebuild
         end
 
         function obj = ExpandEdge(obj)
-            % [Alg.2]
             % Pop the best edge from Q.E
             [~, index] = obj.cost.BestValue(obj.Q,'E',obj.Tree);
             v = obj.Q.E.v(index,:);
@@ -215,7 +214,6 @@ classdef BIT_star_rebuild
 
                         n = size(obj.Q.E.v, 1);
                         rows_to_remove = false(n, 1); % 初始化一个逻辑数组来标记要移除的行
-
                         parfor i = 1:n
                             vi = obj.Q.E.v(i,:);
                             if obj.cost.gT(vi, obj.Tree) + obj.cost.c_(vi, x) >= obj.cost.gT(x, obj.Tree)
