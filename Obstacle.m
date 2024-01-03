@@ -91,6 +91,6 @@ classdef Obstacle
             t = (planeVal - eval([planeAxis '0'])) / (eval([planeAxis '1']) - eval([planeAxis '0']));
             intersection = [x0 + t*(x1 - x0), y0 + t*(y1 - y0), z0 + t*(z1 - z0)];
         end
-        
+          
     end
 end

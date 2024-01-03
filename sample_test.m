@@ -1,8 +1,8 @@
-clc;
-clear;
+clc;clf;clear;
+
 % 定义环境参数
-x_root = [0.3 0.6 0.5]; % 起点坐标（列向量）
-X_goal = [0.5 0.9 0.3]; % 目标点坐标（列向量）
+x_root = [0.3 0.9 0.5]; % 起点坐标（列向量）
+X_goal = [0.6 0.5 0.45]; % 目标点坐标（列向量）
 c_sol = 0.5; % 当前最优路径长度
 Q.v = [x_root];
 Q.x = [X_goal];
@@ -10,12 +10,12 @@ Q.x = [X_goal];
 dist = @(x, y) norm(x - y);
 
 % 定义障碍物
-center = [0.3 0.9 0.55]; % 中心点坐标
+center = [0.4 0.75 0.45]; % 中心点坐标
 le = 0.1; % 立方体的长度
 width = 0.1;  % 立方体的宽度
 height = 0.1; % 立方体的高度
 obstacle = Obstacle(center, le, width, height);
-bit = BIT_star_rebuild(obstacle, x_root, X_goal ,3 , 1000);
+bit = BIT_star_rebuild(obstacle, x_root, X_goal ,3 , 5000);
 path = bit.Solution();
 % % % 测试 randSample 函数
 % m = 2500; % 采样点个数
@@ -24,29 +24,26 @@ path = bit.Solution();
 % X_rand2 = randSample(x_root, X_goal, c_sol, m, obstacle, dist);
 % %bit = BIT_star(x_root, X_goal, obstacle);
 % %X_sol = bit.BIT();
-% % 绘制障碍物和采样点
-% figure;
-% hold on;
-% axis equal;
-% grid on;
-% 
-% % 绘制障碍物
-% obstacle.plotObstacle();
-% 
-% % 绘制采样点
-% for i = 1:length(X_rand)
-%     plot3(X_rand(1,i), X_rand(2,i), X_rand(3,i), 'r.');
-% end
-% 
-% % 标记起点和终点
-% plot3(x_root(1), x_root(2), x_root(3), 'go', 'MarkerSize', 10, 'MarkerFaceColor', 'g');
-% plot3(X_goal(1), X_goal(2), X_goal(3), 'bo', 'MarkerSize', 10, 'MarkerFaceColor', 'b');
-% 
-% xlabel('X');
-% ylabel('Y');
-% zlabel('Z');
-% title('informed set');
-% hold off;
+% 绘制障碍物和采样点
+figure;
+hold on;
+axis equal;
+grid on;
+
+% 绘制障碍物
+obstacle.plotObstacle();
+
+% 绘制采样点
+plot3(path(:,1), path(:,2), path(:,3), 'r.-');
+% 标记起点和终点
+plot3(x_root(1), x_root(2), x_root(3), 'go', 'MarkerSize', 10, 'MarkerFaceColor', 'g');
+plot3(X_goal(1), X_goal(2), X_goal(3), 'bo', 'MarkerSize', 10, 'MarkerFaceColor', 'b');
+
+xlabel('X');
+ylabel('Y');
+zlabel('Z');
+title('BIT*');
+hold off;
 % function X_rand = randSample(x_root, X_goal, c_sol, m, obstacle, dist)
 %     X_rand = []; % 初始化为空矩阵
 %     while size(X_rand, 2) < m

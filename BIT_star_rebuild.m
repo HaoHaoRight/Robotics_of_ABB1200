@@ -16,6 +16,7 @@ classdef BIT_star_rebuild
         X_samples;% The set of unconnected samples
         demension;
         radius;
+        cost_old;
         m;
     end % end properties
     methods
@@ -34,51 +35,87 @@ classdef BIT_star_rebuild
             obj.X_samples = [obj.x_goal];
             obj.V_old = [];
             obj.m = m;
+            obj.cost_old = inf;
         end
         function path = Solution(obj)
-            while obj.cost.gT(obj.x_goal, obj.Tree) < 1.1*norm(obj.x_goal-obj.x_root)
+            batch_count = 1;
+            while 1
                 if isempty(obj.Q.V) && isempty(obj.Q.E.v) && isempty(obj.Q.E.x)
                     % Batch creation
-                    Prune(obj, obj.cost.gT(obj.x_goal, obj.Tree));
+                    obj = Prune(obj, obj.cost.gT(obj.x_goal, obj.Tree));
                     % Prune(gT(x_goal))
                     obj.X_samples = [obj.X_samples; obj.Sample(obj.m, obj.cost.gT(obj.x_goal, obj.Tree))];
+                    obj.Plot(batch_count);
+                    batch_count = batch_count + 1;
                     % Sample(m, gT(x_goal))
                     obj.V_old = obj.Tree.V;
                     obj.Q.V = obj.Tree.V;
-                    obj.radius = 10;
-                    path = obj.Tree;
+                    obj.radius = 0.08;
                 end
-                while obj.cost.BestValue(obj.Q,'V',obj.Tree) <= obj.cost.BestValue(obj.Q,'E',obj.Tree)
-                    obj.ExpandVertex();
+                while obj.cost.BestValue(obj.Q,'V',obj.Tree) <= obj.cost.BestValue(obj.Q,'E',obj.Tree) && ~isempty(obj.Q.V)
+                    obj = obj.ExpandVertex();
                 end
-                obj.ExpandEdge();
-            end
-        end
+                if ~isempty(obj.Q.E.v)
+                    obj = obj.ExpandEdge();
+                end
 
-        function Prune(obj, c)
-            % Prune the tree (g_(x)+h_(x) > c)
-            for i = 1:size(obj.X_samples)
-                if obj.cost.g_(obj.X_samples(i,:))+obj.cost.h_(obj.X_samples(i,:)) > c
-                    obj.X_samples(i,:) = [];
-                end
-            end
-            for i = 1:size(obj.Tree.V)
-                if obj.cost.g_(obj.Tree.V(i,:))+obj.cost.h_(obj.Tree.V(i,:)) > c
-                    obj.Tree.V(i,:) = [];
-                end
-            end
-            for i = 1:size(obj.Tree.E.v)
-                if obj.cost.g_(obj.Tree.E.v(i,:))+obj.cost.h_(obj.Tree.E.v(i,:)) > c
-                    obj.Tree.E.v(i,:) = [];
-                    obj.Tree.E.x(i,:) = [];
-                end
-            end
-            for i = 1:size(obj.V_old)
-                if obj.cost.g_(obj.V_old(i,:))+obj.cost.h_(obj.V_old(i,:)) > c
-                    obj.V_old(i,:) = [];
+                cost_new = obj.cost.gT(obj.x_goal, obj.Tree);
+                if cost_new  < obj.cost_old
+                    fprintf('Now cost = %f\n', cost_new);
+                    if obj.cost_old - cost_new < 0.1
+                        path = obj.Path();
+                        break
+                    end
+                    obj.cost_old = cost_new;
                 end
             end
             
+        end
+
+        function obj = Prune(obj, c)
+            % Prune the tree (g_(x)+h_(x) > c)
+            % 定义删除索引的数组
+            del_idx_X_samples = false(size(obj.X_samples, 1), 1);
+            del_idx_Tree_V = false(size(obj.Tree.V, 1), 1);
+            del_idx_Tree_E = false(size(obj.Tree.E.v, 1), 1);
+            del_idx_V_old = false(size(obj.V_old, 1), 1);
+            for i = size(obj.X_samples):-1:1
+                if norm(obj.X_samples(i,:)-obj.x_root)+norm(obj.X_samples(i,:)-obj.x_goal) > c
+                    del_idx_X_samples(i) = true;
+                end
+            end
+            obj.X_samples(del_idx_X_samples,:) = [];
+            
+            for i = size(obj.Tree.V):-1:1
+                if obj.cost.g_(obj.Tree.V(i,:))+obj.cost.h_(obj.Tree.V(i,:)) > c
+                    del_idx_Tree_V(i) = true;
+                end
+            end
+            obj.Tree.V(del_idx_Tree_V,:) = [];
+
+            for i = size(obj.Tree.E.v):-1:1
+                if obj.cost.g_(obj.Tree.E.v(i,:))+obj.cost.h_(obj.Tree.E.v(i,:)) > c || obj.cost.g_(obj.Tree.E.x(i,:))+obj.cost.h_(obj.Tree.E.x(i,:)) > c
+                    del_idx_Tree_E(i) = true;
+                end
+            end
+            obj.Tree.E.v(del_idx_Tree_E,:) = [];
+            obj.Tree.E.x(del_idx_Tree_E,:) = [];
+
+            for i = size(obj.V_old):-1:1
+                if obj.cost.g_(obj.V_old(i,:))+obj.cost.h_(obj.V_old(i,:)) > c
+                    del_idx_V_old(i) = true;
+                end
+            end
+            obj.V_old(del_idx_V_old,:) = [];
+
+            del_idx_Tree_V = false(size(obj.Tree.V, 1), 1);
+            for i = size(obj.Tree.V):-1:1
+                if obj.cost.gT(obj.Tree.V(i,:), obj.Tree) == inf
+                    obj.X_samples = [obj.X_samples; obj.Tree.V(i,:)];
+                    del_idx_Tree_V(i) = true;
+                end
+            end
+            obj.Tree.V(del_idx_Tree_V,:) = [];
         end
 
         function X_samples = Sample(obj, m, c) 
@@ -94,7 +131,7 @@ classdef BIT_star_rebuild
             end
         end
         
-        function ExpandVertex(obj)
+        function obj = ExpandVertex(obj)
             % [Alg.2]
             % Pop the best vertex from Q.V
             [~, index] = obj.cost.BestValue(obj.Q,'V',obj.Tree);
@@ -106,12 +143,9 @@ classdef BIT_star_rebuild
             % QE ←+ (v, x) ∈ (V x X_near) 
             for i = 1:size(X_near)
                 x = X_near(i,:);
-                for j = 1:size(obj.Tree.V)
-                    v = obj.Tree.V(j,:);
-                    if obj.cost.g_(v)+obj.cost.c_(v,x)+obj.cost.h_(x) < obj.cost.gT(obj.x_goal)
-                        obj.Q.E.v = [obj.Q.E.v; v];
-                        obj.Q.E.x = [obj.Q.E.x; x];
-                    end
+                if obj.cost.g_(v)+obj.cost.c_(v,x)+obj.cost.h_(x) < obj.cost.gT(obj.x_goal, obj.Tree)
+                    obj.Q.E.v = [obj.Q.E.v; v];
+                    obj.Q.E.x = [obj.Q.E.x; x];
                 end
             end
 
@@ -120,21 +154,18 @@ classdef BIT_star_rebuild
                 % QE ←+ (v, w) ∈ (V x V_near) 
                 for i = 1:size(V_near)
                     w = V_near(i,:);
-                    for j = 1:size(obj.Tree.V)
-                        v = obj.Tree.V(j,:);
-                        if ~any(obj.Q.E.x(obj.Q.E.v == v) == w)
+                    if ~ismember(w, obj.Q.E.x(ismember(obj.Q.E.v, v, 'rows'), :), 'rows')
                         % (v, w) ∉ E
-                            if obj.cost.g_(v)+obj.cost.c_(v,w)+obj.cost.h_(w) < obj.cost.gT(obj.x_goal) && obj.cost.gT(v, obj.Tree) + obj.cost.c_(v,w) < obj.cost.gT(w, obj.Tree)
-                                obj.Q.E.v = [obj.Q.E.v; v];
-                                obj.Q.E.x = [obj.Q.E.x; w];
-                            end
+                        if obj.cost.g_(v)+obj.cost.c_(v,w)+obj.cost.h_(w) < obj.cost.gT(obj.x_goal,obj.Tree) && obj.cost.gT(v,obj.Tree) + obj.cost.c_(v,w) < obj.cost.gT(w, obj.Tree)
+                            obj.Q.E.v = [obj.Q.E.v; v];
+                            obj.Q.E.x = [obj.Q.E.x; w];
                         end
                     end
                 end
             end
         end
 
-        function ExpandEdge(obj)
+        function obj = ExpandEdge(obj)
             % [Alg.2]
             % Pop the best edge from Q.E
             [~, index] = obj.cost.BestValue(obj.Q,'E',obj.Tree);
@@ -148,23 +179,29 @@ classdef BIT_star_rebuild
                     if obj.cost.gT(v,obj.Tree) + obj.cost.c(v,x) < obj.cost.gT(x,obj.Tree)
                         if ismember(x, obj.Tree.V, 'rows')
                             % x ∈ V
-                            obj.Tree.E.v(obj.Tree.E.x == x) = [];
-                            obj.Tree.E.x(obj.Tree.E.x == x) = [];
+                            obj.Tree.E.v = obj.Tree.E.v(~ismember(obj.Tree.E.x, x, 'rows'),:);
+                            obj.Tree.E.x = obj.Tree.E.x(~ismember(obj.Tree.E.x, x, 'rows'),:);
                         else
                             % x ∉ V
-                            obj.X_samples(obj.X_samples == x) = [];
+                            obj.X_samples = obj.X_samples(~ismember(obj.X_samples, x, 'rows'),:);
                             obj.Tree.V = [obj.Tree.V; x];
                             obj.Q.V = [obj.Q.V; x];
                         end
                         obj.Tree.E.v = [obj.Tree.E.v; v];
                         obj.Tree.E.x = [obj.Tree.E.x; x];
-                        for i = 1:size(obj.Q.E.v)
+
+                        rows_to_remove = false(size(obj.Q.E.v, 1), 1);  % 逻辑索引数组
+
+                        for i = size(obj.Q.E.v, 1):-1:1
                             vi = obj.Q.E.v(i,:);
-                            if obj.cost.gT(vi)+obj.cost.c_(vi,x) >= obj.cost.gT(x,obj.Tree)
-                                obj.Tree.E.v(obj.Tree.E.x == x) = [];
-                                obj.Tree.E.x(obj.Tree.E.x == x) = [];
+                            if obj.cost.gT(vi, obj.Tree) + obj.cost.c_(vi, x) >= obj.cost.gT(x, obj.Tree)
+                                rows_to_remove(i) = true;
                             end
                         end
+
+                        % 删除标记的行
+                        obj.Q.E.v(rows_to_remove, :) = [];
+                        obj.Q.E.x(rows_to_remove, :) = [];
                     end
                 end
             else
@@ -175,5 +212,35 @@ classdef BIT_star_rebuild
             end
         end
 
+        function X_near = Near(obj, x, Samples)
+            % X_near ←+ x′ ∈ X : ||x′ − x|| ≤ r
+            X_near = [];
+            for i = 1:size(Samples)
+                if (norm(Samples(i,:)-x) <= obj.radius) && ~isequal(Samples(i,:),x)
+                    X_near = [X_near; Samples(i,:)];
+                end
+            end
+        end
+
+        function path = Path(obj)
+            path = [];
+            current = obj.x_goal;
+            while ~isempty(obj.x_root)
+                path = [current; path];
+                if isequal(obj.x_root, current)
+                    break
+                end
+                current = obj.Tree.E.v(ismember(obj.Tree.E.x, current, 'rows'),:);
+            end
+        end
+        function Plot(obj, batch_count)
+            figure;
+            hold on;
+            axis equal;
+            grid on;
+            plot3(obj.X_samples(:,1), obj.X_samples(:,2), obj.X_samples(:,3), 'b.');
+            title('Batch',batch_count);
+            hold off;
+        end  
     end % end methods
 end % end classdef
