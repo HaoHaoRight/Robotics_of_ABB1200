@@ -19,4 +19,17 @@
       %  *Batch creation*
 
       5. **Prune**(gT(x_goal))
-      6. 
+      6. X_samples <- **Sample**(m,gT(x_goal))
+      7. V_old <- V;
+      8. Q_V <- V;
+
+   9. **while** BestValue(Q_V) <= BestValue(Q_E)
+
+      %  *Batch creation*
+
+      10. ExpandVertex()
+
+   11. ExpandEdge()
+
+12. **until** STOP
+13. **return** T
