@@ -91,6 +91,22 @@ classdef Obstacle
             t = (planeVal - eval([planeAxis '0'])) / (eval([planeAxis '1']) - eval([planeAxis '0']));
             intersection = [x0 + t*(x1 - x0), y0 + t*(y1 - y0), z0 + t*(z1 - z0)];
         end
-          
+        function inside = isPointInside(obj, point)
+            % 判断点是否在障碍物内
+            %   point: 要检查的点的坐标 [x, y, z]
+
+            % 获取立方体的边界
+            minX = min(obj.vertices(:,1));
+            maxX = max(obj.vertices(:,1));
+            minY = min(obj.vertices(:,2));
+            maxY = max(obj.vertices(:,2));
+            minZ = min(obj.vertices(:,3));
+            maxZ = max(obj.vertices(:,3));
+
+            % 检查点的坐标是否在这些边界内
+            inside = point(1) >= minX && point(1) <= maxX && ...
+                point(2) >= minY && point(2) <= maxY && ...
+                point(3) >= minZ && point(3) <= maxZ;
+        end
     end
 end

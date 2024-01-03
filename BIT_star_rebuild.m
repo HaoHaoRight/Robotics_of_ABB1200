@@ -31,7 +31,7 @@ classdef BIT_star_rebuild
             obj.Tree.V = [obj.x_root];
             obj.Q = struct('V',[],'E',[]);
             obj.Q.V = [];
-            obj.Q.E = struct('v',[],'x',[]);
+            obj.Q.E = struct('v',[],'x',[],'cost',[]);
             obj.X_samples = [obj.x_goal];
             obj.V_old = [];
             obj.m = m;
@@ -62,14 +62,17 @@ classdef BIT_star_rebuild
                 cost_new = obj.cost.gT(obj.x_goal, obj.Tree);
                 if cost_new  < obj.cost_old
                     fprintf('Now cost = %f\n', cost_new);
-                    if obj.cost_old - cost_new < 0.1
+                    percent_change = abs((obj.cost_old - cost_new) / obj.cost_old)*100;
+                    fprintf('Cost Change Rate = %f %%\n', percent_change);
+                    if cost_new < 0.541
+                    %if percent_change < 0.03  % 阈值
                         path = obj.Path();
                         break
                     end
                     obj.cost_old = cost_new;
                 end
             end
-            
+
         end
 
         function obj = Prune(obj, c)
@@ -118,15 +121,22 @@ classdef BIT_star_rebuild
             obj.Tree.V(del_idx_Tree_V,:) = [];
         end
 
-        function X_samples = Sample(obj, m, c) 
+        function Samples = Sample(obj, m, c)
             % 拒绝采样版本
-            X_samples = zeros(m, obj.demension);
-            count = 1;
-            while count <= m
-                rand_point = rand(1,obj.demension); % 生成随机点（n维行向量）
-                if norm(rand_point-obj.x_root) + norm(rand_point-obj.x_goal) <= c && ~obj.obstacle.isVectorIntersectingObstacle(rand_point, obj.x_goal)
-                    X_samples(count, :) = rand_point; % 添加行向量到矩阵
-                    count = count + 1;
+            Samples = zeros(m, obj.demension);
+            dem = obj.demension;
+            root = obj.x_root;
+            goal = obj.x_goal;
+            obs = obj.obstacle;
+            % 使用 parfor 生成样本
+            parfor i = 1:m
+                valid_sample = false;
+                while ~valid_sample
+                    rand_point = rand(1, dem); % 生成随机点（n维行向量）
+                    if norm(rand_point-root) + norm(rand_point-goal) <= c && ~obs.isPointInside(rand_point)
+                        Samples(i, :) = rand_point; % 添加行向量到矩阵
+                        valid_sample = true;
+                    end
                 end
             end
         end
@@ -240,6 +250,7 @@ classdef BIT_star_rebuild
             grid on;
             plot3(obj.X_samples(:,1), obj.X_samples(:,2), obj.X_samples(:,3), 'b.');
             title('Batch',batch_count);
+            view(60, 30);
             hold off;
         end  
     end % end methods

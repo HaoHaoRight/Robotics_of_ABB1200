@@ -74,36 +74,37 @@ classdef costs
             % 计算当前节点与起始节点之间的 L2 范数。
             g_hat = norm(current_node - obj.start);
         end
-        
- % h_(x) | 为X空间内点x的启发式的下界估计。h_(x,y):=c_(x,x_t)，其中x_t是通过规划问题找到的最佳解决方案的终点。
+
+        % h_(x) | 为X空间内点x的启发式的下界估计。h_(x,y):=c_(x,x_t)，其中x_t是通过规划问题找到的最佳解决方案的终点。
         function h_hat = h_(obj, current_node)
-            %current_node是当前节点，goal是目标节点             
+            %current_node是当前节点，goal是目标节点
             % 生成当前节点的 h_hat 值。这是当前节点与目标节点之间的 L2 范数。
             % 计算当前节点与目标节点之间的 L2 范数。
             h_hat = norm(current_node - obj.goal);
         end
-        
-% 定义 11 (cost ← BestValue(Qi))：查找 Qi 中队列成本最低的元素，并返回该元素的队列成本。    
-% Definition 11  (cost ← BestValue(Qi)) 
-% Finds the elementin Qi with the lowest queue cost and returns the queue cost of that element.
-        function [BestValue, index] = BestValue(obj, Q, name, Tree)
-            % Q:队列，name:队列名称
 
-            % QV queue cost: gT(v)+h_(v)
-            BestValue = [];
+        % 定义 11 (cost ← BestValue(Qi))：查找 Qi 中队列成本最低的元素，并返回该元素的队列成本。
+        % Definition 11  (cost ← BestValue(Qi))
+        % Finds the elementin Qi with the lowest queue cost and returns the queue cost of that element.
+        function [BestValue, index] = BestValue(obj, Q, name, Tree)
+            BestValue = []; % 初始化
             if strcmp(name, 'V')
-                for i=1:size(Q.V)
-                    BestValue = [BestValue obj.gT(Q.V(i,:), Tree)+obj.h_(Q.V(i,:))];
+                % 预分配数组大小
+                BestValue = zeros(1, size(Q.V, 1));
+                parfor i = 1:size(Q.V, 1)
+                    BestValue(i) = obj.gT(Q.V(i,:), Tree) + obj.h_(Q.V(i,:));
                 end
                 if isempty(BestValue)
                     BestValue = inf;
                 end
                 [BestValue, index] = min(BestValue);
             end
-            % QE queue cost: gT(v)+c_(v, x)+h_(x)
+
             if strcmp(name, 'E')
-                for i=1:size(Q.E.v)
-                    BestValue = [BestValue obj.gT(Q.E.v(i,:), Tree)+obj.c_(Q.E.v(i,:),Q.E.x(i,:))+obj.h_(Q.E.x(i,:))];
+                % 预分配数组大小
+                BestValue = zeros(1, size(Q.E.v, 1));
+                parfor i = 1:size(Q.E.v, 1)
+                    BestValue(i) = obj.gT(Q.E.v(i,:), Tree) + obj.c_(Q.E.v(i,:), Q.E.x(i,:)) + obj.h_(Q.E.x(i,:));
                 end
                 if isempty(BestValue)
                     BestValue = inf;
@@ -111,7 +112,6 @@ classdef costs
                 [BestValue, index] = min(BestValue);
                 index = index(1);
             end
-
         end
 
     end % methods

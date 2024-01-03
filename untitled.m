@@ -1,12 +1,31 @@
+clc;clear;
+% 定义障碍物的中心点、长度、宽度和高度
+center = [0, 0, 0]; % 障碍物中心在原点
+length = 10;        % 长度为10
+width = 10;         % 宽度为10
+height = 10;        % 高度为10
 
-% 测试示例
-x0 = 0; y0 = 0; z0 = 0;
-x1 = 1; y1 = 1; z1 = 1;
-planeVal = 0.5;
-planeAxis = 'x';
+% 创建障碍物对象
+obstacle = Obstacle(center, length, width, height);
 
-intersection = intersectionWithPlane(x0, y0, z0, x1, y1, z1, planeVal, planeAxis)
-function intersection = intersectionWithPlane(x0, y0, z0, x1, y1, z1, planeVal, planeAxis)
-    t = (planeVal - eval([planeAxis '0'])) / (eval([planeAxis '1']) - eval([planeAxis '0']));
-    intersection = [x0 + t*(x1 - x0), y0 + t*(y1 - y0), z0 + t*(z1 - z0)];
+% 定义几个测试点
+points = [
+    0, 0, 0;    % 中心点，应在障碍物内
+    5, 5, 5;    % 边界上的点，应在障碍物内
+    6, 6, 6;    % 外部点，应在障碍物外
+    -5, -5, -5; % 边界上的另一点，应在障碍物内
+    -6, -6, -6  % 另一个外部点，应在障碍物外
+];
+
+% 检查每个点是否在障碍物内
+% 检查每个点是否在障碍物内
+for i = 1:size(points, 1)
+    point = points(i, :);
+    inside = obstacle.isPointInside(point);
+    if inside
+        status = ''; % 在障碍物内
+    else
+        status = '不'; % 不在障碍物内
+    end
+    fprintf('点 (%.2f, %.2f, %.2f) %s在障碍物内部。\n', point(1), point(2), point(3), status);
 end

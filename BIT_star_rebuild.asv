@@ -31,23 +31,26 @@ classdef BIT_star_rebuild
             obj.Tree.V = [obj.x_root];
             obj.Q = struct('V',[],'E',[]);
             obj.Q.V = [];
-            obj.Q.E = struct('v',[],'x',[]);
+            obj.Q.E = struct('v',[],'x',[],'cost',[]);
             obj.X_samples = [obj.x_goal];
             obj.V_old = [];
             obj.m = m;
             obj.cost_old = inf;
         end
         function path = Solution(obj)
+            batch_count = 1;
             while 1
                 if isempty(obj.Q.V) && isempty(obj.Q.E.v) && isempty(obj.Q.E.x)
                     % Batch creation
-                    Prune(obj, obj.cost.gT(obj.x_goal, obj.Tree));
+                    obj = Prune(obj, obj.cost.gT(obj.x_goal, obj.Tree));
                     % Prune(gT(x_goal))
                     obj.X_samples = [obj.X_samples; obj.Sample(obj.m, obj.cost.gT(obj.x_goal, obj.Tree))];
+                    obj.Plot(batch_count);
+                    batch_count = batch_count + 1;
                     % Sample(m, gT(x_goal))
                     obj.V_old = obj.Tree.V;
                     obj.Q.V = obj.Tree.V;
-                    obj.radius = 0.1;
+                    obj.radius = 0.08;
                 end
                 while obj.cost.BestValue(obj.Q,'V',obj.Tree) <= obj.cost.BestValue(obj.Q,'E',obj.Tree) && ~isempty(obj.Q.V)
                     obj = obj.ExpandVertex();
@@ -55,62 +58,79 @@ classdef BIT_star_rebuild
                 if ~isempty(obj.Q.E.v)
                     obj = obj.ExpandEdge();
                 end
-                if obj.cost.gT(obj.x_goal, obj.Tree) < 1.1*norm(obj.x_goal-obj.x_root)
 
-                end
-                if obj.cost_old < obj.cost.gT(obj.x_goal, obj.Tree)
-                    nowcost
-                    print('Now cost = ', obj.cost.gT(obj.x_goal, obj.Tree));
-                    if obj.cost_old - obj.cost.gT(obj.x_goal, obj.Tree) < 0.01
+                cost_new = obj.cost.gT(obj.x_goal, obj.Tree);
+                if cost_new  < obj.cost_old
+                    fprintf('Now cost = %f\n', cost_new);
+                    percent_change = abs((obj.cost_old - cost_new) / obj.cost_old)*100;
+                    fprintf('Cost Change Rate = %f %%\n', percent_change);
+                    if cost_new < 0.541
+                    %if percent_change < 0.03  % 阈值
                         path = obj.Path();
                         break
                     end
-                    obj.cost_old = obj.cost.gT(obj.x_goal, obj.Tree);
+                    obj.cost_old = cost_new;
                 end
             end
-            
+
         end
 
-        function Prune(obj, c)
+        function obj = Prune(obj, c)
             % Prune the tree (g_(x)+h_(x) > c)
+            % 定义删除索引的数组
+            del_idx_X_samples = false(size(obj.X_samples, 1), 1);
+            del_idx_Tree_V = false(size(obj.Tree.V, 1), 1);
+            del_idx_Tree_E = false(size(obj.Tree.E.v, 1), 1);
+            del_idx_V_old = false(size(obj.V_old, 1), 1);
             for i = size(obj.X_samples):-1:1
-                if obj.cost.g_(obj.X_samples(i,:))+obj.cost.h_(obj.X_samples(i,:)) > c
-                    obj.X_samples(i,:) = [];
+                if norm(obj.X_samples(i,:)-obj.x_root)+norm(obj.X_samples(i,:)-obj.x_goal) > c
+                    del_idx_X_samples(i) = true;
                 end
             end
+            obj.X_samples(del_idx_X_samples,:) = [];
+            
             for i = size(obj.Tree.V):-1:1
                 if obj.cost.g_(obj.Tree.V(i,:))+obj.cost.h_(obj.Tree.V(i,:)) > c
-                    obj.Tree.V(i,:) = [];
+                    del_idx_Tree_V(i) = true;
                 end
             end
+            obj.Tree.V(del_idx_Tree_V,:) = [];
+
             for i = size(obj.Tree.E.v):-1:1
                 if obj.cost.g_(obj.Tree.E.v(i,:))+obj.cost.h_(obj.Tree.E.v(i,:)) > c || obj.cost.g_(obj.Tree.E.x(i,:))+obj.cost.h_(obj.Tree.E.x(i,:)) > c
-                    obj.Tree.E.v(i,:) = [];
-                    obj.Tree.E.x(i,:) = [];
+                    del_idx_Tree_E(i) = true;
                 end
             end
+            obj.Tree.E.v(del_idx_Tree_E,:) = [];
+            obj.Tree.E.x(del_idx_Tree_E,:) = [];
+
             for i = size(obj.V_old):-1:1
                 if obj.cost.g_(obj.V_old(i,:))+obj.cost.h_(obj.V_old(i,:)) > c
-                    obj.V_old(i,:) = [];
+                    del_idx_V_old(i) = true;
                 end
             end
+            obj.V_old(del_idx_V_old,:) = [];
+
+            del_idx_Tree_V = false(size(obj.Tree.V, 1), 1);
             for i = size(obj.Tree.V):-1:1
                 if obj.cost.gT(obj.Tree.V(i,:), obj.Tree) == inf
-                    obj.X_samples = obj.Tree.V(i,:);
-                    obj.Tree.V(i,:) = [];
+                    obj.X_samples = [obj.X_samples; obj.Tree.V(i,:)];
+                    del_idx_Tree_V(i) = true;
                 end
             end
+            obj.Tree.V(del_idx_Tree_V,:) = [];
         end
 
-        function X_samples = Sample(obj, m, c) 
+        function Samples = Sample(obj, m, c) 
             % 拒绝采样版本
-            X_samples = zeros(m, obj.demension);
-            count = 1;
-            while count <= m
-                rand_point = rand(1,obj.demension); % 生成随机点（n维行向量）
-                if norm(rand_point-obj.x_root) + norm(rand_point-obj.x_goal) <= c && ~obj.obstacle.isVectorIntersectingObstacle(rand_point, obj.x_goal)
-                    X_samples(count, :) = rand_point; % 添加行向量到矩阵
-                    count = count + 1;
+            Samples = zeros(m, obj.demension);
+            dem = obj.demension;
+            root = obj.x_root;
+            goal = obj.x_goal;
+            for i = m
+                rand_point = rand(1,dem); % 生成随机点（n维行向量）
+                if norm(rand_point-root) + norm(rand_point-goal) <= c && ~obj.obstacle.isPointInside(rand_point)
+                    Samples(i, :) = rand_point; % 添加行向量到矩阵
                 end
             end
         end
@@ -217,5 +237,15 @@ classdef BIT_star_rebuild
                 current = obj.Tree.E.v(ismember(obj.Tree.E.x, current, 'rows'),:);
             end
         end
+        function Plot(obj, batch_count)
+            figure;
+            hold on;
+            axis equal;
+            grid on;
+            plot3(obj.X_samples(:,1), obj.X_samples(:,2), obj.X_samples(:,3), 'b.');
+            title('Batch',batch_count);
+            view(60, 30);
+            hold off;
+        end  
     end % end methods
 end % end classdef
