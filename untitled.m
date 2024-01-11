@@ -1,31 +1,63 @@
-clc;clear;
-% 定义障碍物的中心点、长度、宽度和高度
-center = [0, 0, 0]; % 障碍物中心在原点
-length = 10;        % 长度为10
-width = 10;         % 宽度为10
-height = 10;        % 高度为10
+% 请求用户输入步长
+h = input('请输入步长 h = ');
 
-% 创建障碍物对象
-obstacle = Obstacle(center, length, width, height);
+% 根据步长计算角度步长
+theta_step = h; % 使用用户提供的步长作为角度步长
 
-% 定义几个测试点
-points = [
-    0, 0, 0;    % 中心点，应在障碍物内
-    5, 5, 5;    % 边界上的点，应在障碍物内
-    6, 6, 6;    % 外部点，应在障碍物外
-    -5, -5, -5; % 边界上的另一点，应在障碍物内
-    -6, -6, -6  % 另一个外部点，应在障碍物外
-];
+% Define the number of petals and the maximum radius
+num_petals = 4; % For example, a 4-petal rose
+max_radius = 5; % Maximum radius of the petals
 
-% 检查每个点是否在障碍物内
-% 检查每个点是否在障碍物内
-for i = 1:size(points, 1)
-    point = points(i, :);
-    inside = obstacle.isPointInside(point);
-    if inside
-        status = ''; % 在障碍物内
-    else
-        status = '不'; % 不在障碍物内
-    end
-    fprintf('点 (%.2f, %.2f, %.2f) %s在障碍物内部。\n', point(1), point(2), point(3), status);
+% Initialize arrays to store the X and Y coordinates
+X = [];
+Y = [];
+
+% Initialize the step counter
+step_number = 0;
+
+% Calculate the points on the petal curve
+for theta = 0 : theta_step : 2*pi
+    % Rose curve equation for a petal
+    r = max_radius * cos(num_petals * theta);
+    
+    % Convert polar coordinates to Cartesian coordinates
+    x = r * cos(theta);
+    y = r * sin(theta);
+    
+    % Store the coordinates
+    X(end+1) = x;
+    Y(end+1) = y;
 end
+
+% Plot the curve
+figure;
+plot(X, Y, 'r-'); % Red color for the petal curve
+axis equal; % Ensure equal scaling for both axes
+grid on; % Turn on the grid
+title('Full Quadrant Petal Curve Interpolation');
+xlabel('X');
+ylabel('Y');
+
+% Hold on to plot the interpolation lines and step numbers
+hold on;
+
+% Interpolate between the points with straight lines and annotate steps
+for i = 1:length(X)-1
+    % Draw the line between points
+    plot([X(i), X(i+1)], [Y(i), Y(i+1)], 'b-'); % Blue for interpolation lines
+    
+    % Increment the step counter
+    step_number = step_number + 1;
+    
+    % Annotate the step number at the midpoint of the line
+    mid_x = (X(i) + X(i+1)) / 2;
+    mid_y = (Y(i) + Y(i+1)) / 2;
+    text(mid_x, mid_y, num2str(step_number));
+    
+    % Pause to visualize the drawing process
+    pause(0.1); 
+end
+
+% Hold off after plotting
+hold off;
+

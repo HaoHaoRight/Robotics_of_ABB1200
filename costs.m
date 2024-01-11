@@ -48,13 +48,14 @@ classdef costs < handle
 
             % 将当前节点转换为字符串以用作缓存键
             % node_key = matlab.lang.makeValidName(num2str(current_node));
-            % 
+            %
             % if isequal(obj.Tree_old, Tree) && isfield(obj.Cache, node_key)
             %     gT = obj.Cache.(node_key);
             %     return;
             % end
             % 检查当前节点是否为空或不在树中
-            if isempty(current_node) || ~ismember(current_node, Tree.V, 'rows')
+            % 检查当前节点是否为空或不在树中
+            if isempty(current_node) || ~any(all(bsxfun(@eq, Tree.V, current_node), 2))
                 gT = inf;
                 return;
             end
@@ -65,28 +66,46 @@ classdef costs < handle
                 return;
             end
 
-            % 查找父节点
-            parent_node = Tree.E.v(ismember(Tree.E.x, current_node, "rows"),:);
+            % 初始化成本
+            gT = 0;
 
-            % 如果没有找到父节点（这意味着当前节点不是根节点但也没有父节点）
-            if isempty(parent_node)
-                gT = inf;
-                return;
+            % 查找当前节点的索引
+            [~,current_index] = ismember(current_node,Tree.E.x,'rows');
+
+            while ~isequal(current_node, Tree.V(1,:))
+                if current_index == 0
+                    [~,current_index] = ismember(current_node,Tree.E.x,'rows');
+                    if current_index == 0
+                        gT = inf;
+                        return;
+                    end
+                end
+                % 查找父节点索引
+                father_index = Tree.E.father_i(current_index);
+                % 如果没有找到父节点（这意味着当前节点不是根节点但也没有父节点）
+                if isempty(father_index) && ~(father_index == 0)
+                    gT = inf;
+                    return;
+                end
+
+                parent_node = Tree.E.v(current_index, :);
+
+                % 计算从父节点到当前节点的成本。
+                edge_cost = norm(current_node - parent_node);
+
+                % 累加父节点的成本和当前边的成本。
+                gT = gT + edge_cost;
+
+                % 更新当前节点和索引
+                current_node = parent_node;
+                current_index = father_index;
             end
-            % 计算从父节点到当前节点的成本。
-            edge_cost = norm(current_node - parent_node);
-
-            % 递归调用 gT 来计算从根节点到父节点的路径成本。
-            parent_cost = obj.gT(parent_node, Tree);
-
-            % 累加父节点的成本和当前边的成本。
-            gT = parent_cost + edge_cost;
 
             % obj.Cache.(node_key) = gT;
             % obj.Tree_old = Tree;
         end
 
-% g_(x) | 为X空间内点x已经发生的下界估计。   
+        % g_(x) | 为X空间内点x已经发生的下界估计。
         function g_hat = g_(obj, current_node)
             % current_node是当前节点，start是起始节点
             % 生成当前节点的 g_hat 值。这是当前节点与起始节点之间的 L2 范数。
@@ -110,7 +129,7 @@ classdef costs < handle
             if strcmp(name, 'V')
                 % 预分配数组大小
                 BestValue = zeros(1, size(Q.V, 1));
-                parfor i = 1:size(Q.V, 1)
+                for i = 1:size(Q.V, 1)% parfor
                     BestValue(i) = obj.gT(Q.V(i,:), Tree) + obj.h_(Q.V(i,:));
                 end
                 if isempty(BestValue)
@@ -122,7 +141,7 @@ classdef costs < handle
             if strcmp(name, 'E')
                 % 预分配数组大小
                 BestValue = zeros(1, size(Q.E.v, 1));
-                parfor i = 1:size(Q.E.v, 1)
+                for i = 1:size(Q.E.v, 1)% parfor
                     BestValue(i) = obj.gT(Q.E.v(i,:), Tree) + obj.c_(Q.E.v(i,:), Q.E.x(i,:)) + obj.h_(Q.E.x(i,:));
                 end
                 if isempty(BestValue)

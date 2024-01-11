@@ -27,7 +27,7 @@ classdef BIT_star_rebuild
             obj.cost = costs(obj.x_root, obj.x_goal, obj.obstacle);
             obj.demension = demension;
             obj.Tree = struct('V',[],'E',[]);
-            obj.Tree.E = struct('v',[],'x',[]);
+            obj.Tree.E = struct('v',[],'x',[],'father_i',[]);
             obj.Tree.V = [obj.x_root];
             obj.Q = struct('V',[],'E',[]);
             obj.Q.V = [];
@@ -64,7 +64,7 @@ classdef BIT_star_rebuild
                     fprintf('Now cost = %f\n', cost_new);
                     percent_change = abs((obj.cost_old - cost_new) / obj.cost_old)*100;
                     fprintf('Cost Change Rate = %f %%\n', percent_change);
-                    if cost_new < 0.541
+                    if cost_new < 0.54
                     %if percent_change < 0.03  % 阈值
                         path = obj.Path();
                         break
@@ -103,6 +103,8 @@ classdef BIT_star_rebuild
             end
             obj.Tree.E.v(del_idx_Tree_E,:) = [];
             obj.Tree.E.x(del_idx_Tree_E,:) = [];
+            obj.Tree.E.father_i(del_idx_Tree_E) = [];
+            obj = obj.updateTreeIndices();
 
             for i = size(obj.V_old):-1:1
                 if obj.cost.g_(obj.V_old(i,:))+obj.cost.h_(obj.V_old(i,:)) > c
@@ -129,7 +131,7 @@ classdef BIT_star_rebuild
             goal = obj.x_goal;
             obs = obj.obstacle;
             % 使用 parfor 生成样本
-            parfor i = 1:m
+            for i = 1:m% parfor
                 valid_sample = false;
                 while ~valid_sample
                     rand_point = rand(1, dem); % 生成随机点（n维行向量）
@@ -161,7 +163,7 @@ classdef BIT_star_rebuild
             [n, ~] = size(X_near);
 
             % QE ←+ (v, x) ∈ (V x X_near) 
-            parfor i = 1:n
+            for i = 1:n% parfor
                 x = X_near(i,:);
                 if norm(v-start)+norm(v-x)+norm(x-goal) < c.gT(goal, Tree_copy)
                         tempV = [tempV; v];
@@ -201,8 +203,11 @@ classdef BIT_star_rebuild
                     if obj.cost.gT(v,obj.Tree) + obj.cost.c(v,x) < obj.cost.gT(x,obj.Tree)
                         if ismember(x, obj.Tree.V, 'rows')
                             % x ∈ V
-                            obj.Tree.E.v = obj.Tree.E.v(~ismember(obj.Tree.E.x, x, 'rows'),:);
-                            obj.Tree.E.x = obj.Tree.E.x(~ismember(obj.Tree.E.x, x, 'rows'),:);
+                            del_index = ismember(obj.Tree.E.x, x, 'rows');
+                            obj.Tree.E.v(del_index,:) = [];
+                            obj.Tree.E.x(del_index,:) = [];
+                            obj.Tree.E.father_i(del_index) = [];
+                            obj = obj.updateTreeIndices();
                         else
                             % x ∉ V
                             obj.X_samples = obj.X_samples(~ismember(obj.X_samples, x, 'rows'),:);
@@ -211,10 +216,12 @@ classdef BIT_star_rebuild
                         end
                         obj.Tree.E.v = [obj.Tree.E.v; v];
                         obj.Tree.E.x = [obj.Tree.E.x; x];
+                        [~,father_index] = ismember(v, obj.Tree.E.x, 'rows');
+                        obj.Tree.E.father_i = [obj.Tree.E.father_i; father_index];
 
                         n = size(obj.Q.E.v, 1);
                         rows_to_remove = false(n, 1); % 初始化一个逻辑数组来标记要移除的行
-                        parfor i = 1:n
+                        for i = 1:n% parfor
                             vi = obj.Q.E.v(i,:);
                             if obj.cost.gT(vi, obj.Tree) + obj.cost.c_(vi, x) >= obj.cost.gT(x, obj.Tree)
                                 rows_to_remove(i) = true;
@@ -247,7 +254,7 @@ classdef BIT_star_rebuild
         function path = Path(obj)
             path = [];
             current = obj.x_goal;
-            while ~isempty(obj.x_root)
+            while ~isempty(current)
                 path = [current; path];
                 if isequal(obj.x_root, current)
                     break
@@ -299,10 +306,10 @@ classdef BIT_star_rebuild
             % 判断点是否足够接近点集
             insideCount = 0;
             for i = 1:numSamples
-                    distances = sqrt(sum((pointSet - randomPoints(i,:)).^2, 2));
-                    if any(distances < neighborhoodSize)
-                        insideCount = insideCount + 1;
-                    end
+                distances = sqrt(sum((pointSet - randomPoints(i,:)).^2, 2));
+                if any(distances < neighborhoodSize)
+                    insideCount = insideCount + 1;
+                end
             end
 
             % 计算空间的总体积
@@ -311,5 +318,16 @@ classdef BIT_star_rebuild
             % 估算点集所占体积
             volume = totalVolume * (insideCount / numSamples);
         end
+
+        function obj = updateTreeIndices(obj)
+            % 遍历每个节点，更新其父节点的索引
+            for i = 1:size(obj.Tree.E.x)
+                % 获取当前节点的父节点
+                current = obj.Tree.E.v(i,:);
+                [~,father_index] = ismember(current, obj.Tree.E.x, 'rows');
+                obj.Tree.E.father_i(i) = father_index;
+            end
+        end
+
     end % end methods
 end % end classdef
