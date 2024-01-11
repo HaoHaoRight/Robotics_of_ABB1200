@@ -19,7 +19,7 @@ classdef costs < handle
             % 构造函数
             obj.start = start;
             obj.goal = goal;
-            obj.Cache = containers.Map('KeyType', 'char', 'ValueType', 'any');
+            obj.Cache = containers.Map('KeyType', 'double', 'ValueType', 'any');
             obj.obstacle = obstacle;
             obj.Tree_old = 0;
         end
@@ -52,12 +52,12 @@ classdef costs < handle
             % 检查当前节点是否为空或不在树中
             % 检查 Tree 是否变化
             if ~isequal(obj.Tree_old, Tree)
-                obj.Cache = containers.Map('KeyType', 'char', 'ValueType', 'any');
+                obj.Cache = containers.Map('KeyType', 'double', 'ValueType', 'any');
                 obj.Tree_old = Tree;
             end
 
             % 将当前节点转换为字符串作为缓存的键
-            node_key = sprintf('%.5f_%.5f_%.5f', current_node(1), current_node(2), current_node(3));
+            node_key = current_node(1)+current_node(2)+current_node(3);
 
             % 检查缓存
             if isKey(obj.Cache, node_key)

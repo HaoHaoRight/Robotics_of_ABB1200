@@ -26,12 +26,15 @@ classdef BIT_star_rebuild
             obj.x_goal = x_goal;
             obj.cost = costs(obj.x_root, obj.x_goal, obj.obstacle);
             obj.demension = demension;
+            
             obj.Tree = struct('V',[],'E',[]);
             obj.Tree.E = struct('v',[],'x',[],'father_i',[]);
             obj.Tree.V = [obj.x_root];
+
             obj.Q = struct('V',[],'E',[]);
             obj.Q.V = [];
             obj.Q.E = struct('v',[],'x',[]);
+
             obj.X_samples = [obj.x_goal];
             obj.V_old = [];
             obj.m = m;
