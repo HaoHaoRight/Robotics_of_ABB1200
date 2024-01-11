@@ -10,6 +10,7 @@ classdef costs < handle
         start;
         goal;
         obstacle;
+        Tree_same;
         Tree_old;
         Cache;
     end
@@ -19,9 +20,17 @@ classdef costs < handle
             % 构造函数
             obj.start = start;
             obj.goal = goal;
-            obj.Cache = containers.Map('KeyType', 'double', 'ValueType', 'any');
+            obj.Cache = dictionary(obj.start,0);
             obj.obstacle = obstacle;
-            obj.Tree_old = 0;
+            obj.Tree_same = 0;
+        end
+        function obj = isTreeSame(obj,Tree)
+            if ~isequal(obj.Tree_old, Tree)
+                obj.Cache = dictionary(obj.start,0);% 清空字典
+                obj.Tree_same = 0;
+            else
+                obj.Tree_same = 1;
+            end
         end
  % c(x,y) | 计算X空间内点x到y的路径长度。如果阻塞则返回无穷大，或者路径不存在。               
         function pathLength = c(obj, x, y)
@@ -48,17 +57,9 @@ classdef costs < handle
             % Tree: 包含节点和边的树结构
             % 检查缓存
 
- 
-            % 检查当前节点是否为空或不在树中
-            % 检查 Tree 是否变化
-            if ~isequal(obj.Tree_old, Tree)
-                obj.Cache = containers.Map('KeyType', 'double', 'ValueType', 'any');
-                obj.Tree_old = Tree;
-            end
-
             % 将当前节点转换为字符串作为缓存的键
-            node_key = current_node(1)+current_node(2)+current_node(3);
-
+            node_key = current_node(1)*1e6+current_node(2)*1e5+current_node(3)*1e4;
+            
             % 检查缓存
             if isKey(obj.Cache, node_key)
                 gT = obj.Cache(node_key);

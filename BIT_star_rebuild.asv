@@ -26,12 +26,15 @@ classdef BIT_star_rebuild
             obj.x_goal = x_goal;
             obj.cost = costs(obj.x_root, obj.x_goal, obj.obstacle);
             obj.demension = demension;
+
             obj.Tree = struct('V',[],'E',[]);
             obj.Tree.E = struct('v',[],'x',[],'father_i',[]);
             obj.Tree.V = [obj.x_root];
+
             obj.Q = struct('V',[],'E',[]);
             obj.Q.V = [];
             obj.Q.E = struct('v',[],'x',[]);
+
             obj.X_samples = [obj.x_goal];
             obj.V_old = [];
             obj.m = m;
@@ -45,7 +48,7 @@ classdef BIT_star_rebuild
                     obj = Prune(obj, obj.cost.gT(obj.x_goal, obj.Tree));
                     % Prune(gT(x_goal))
                     obj.X_samples = [obj.X_samples; obj.Sample(obj.m, obj.cost.gT(obj.x_goal, obj.Tree))];
-                    obj.Plot(batch_count);
+                    %obj.Plot(batch_count);
                     batch_count = batch_count + 1;
                     % Sample(m, gT(x_goal))
                     obj.V_old = obj.Tree.V;
@@ -64,7 +67,7 @@ classdef BIT_star_rebuild
                     fprintf('Now cost = %f\n', cost_new);
                     percent_change = abs((obj.cost_old - cost_new) / obj.cost_old)*100;
                     fprintf('Cost Change Rate = %f %%\n', percent_change);
-                    if cost_new < 0.541
+                    if cost_new < 0.57
                     %if percent_change < 0.03  % 阈值
                         path = obj.Path();
                         break
@@ -95,7 +98,8 @@ classdef BIT_star_rebuild
                 end
             end
             obj.Tree.V(del_idx_Tree_V,:) = [];
-
+            obj.cost.isTreeSame(obj.Tree);
+            
             for i = size(obj.Tree.E.v):-1:1
                 if obj.cost.g_(obj.Tree.E.v(i,:))+obj.cost.h_(obj.Tree.E.v(i,:)) > c || obj.cost.g_(obj.Tree.E.x(i,:))+obj.cost.h_(obj.Tree.E.x(i,:)) > c
                     del_idx_Tree_E(i) = true;
@@ -104,8 +108,9 @@ classdef BIT_star_rebuild
             obj.Tree.E.v(del_idx_Tree_E,:) = [];
             obj.Tree.E.x(del_idx_Tree_E,:) = [];
             obj.Tree.E.father_i(del_idx_Tree_E) = [];
+            obj.cost.isTreeSame(obj.Tree);
             obj = obj.updateTreeIndices();
-
+            
             for i = size(obj.V_old):-1:1
                 if obj.cost.g_(obj.V_old(i,:))+obj.cost.h_(obj.V_old(i,:)) > c
                     del_idx_V_old(i) = true;
@@ -121,6 +126,7 @@ classdef BIT_star_rebuild
                 end
             end
             obj.Tree.V(del_idx_Tree_V,:) = [];
+            obj.cost.isTreeSame(obj.Tree);
         end
 
         function Samples = Sample(obj, m, c)
@@ -254,7 +260,7 @@ classdef BIT_star_rebuild
         function path = Path(obj)
             path = [];
             current = obj.x_goal;
-            while ~isempty(obj.x_root)
+            while ~isempty(current)
                 path = [current; path];
                 if isequal(obj.x_root, current)
                     break

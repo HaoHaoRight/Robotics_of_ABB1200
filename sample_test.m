@@ -11,7 +11,7 @@ width = 0.2;  % 立方体的宽度
 height = 0.1; % 立方体的高度
 obstacle = Obstacle(center, le, width, height);
 total_time = 0;
-nums = 20;
+nums = 100;
 for i = 1:nums
     tic;
 

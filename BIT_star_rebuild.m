@@ -26,7 +26,7 @@ classdef BIT_star_rebuild
             obj.x_goal = x_goal;
             obj.cost = costs(obj.x_root, obj.x_goal, obj.obstacle);
             obj.demension = demension;
-            
+
             obj.Tree = struct('V',[],'E',[]);
             obj.Tree.E = struct('v',[],'x',[],'father_i',[]);
             obj.Tree.V = [obj.x_root];
@@ -98,7 +98,8 @@ classdef BIT_star_rebuild
                 end
             end
             obj.Tree.V(del_idx_Tree_V,:) = [];
-
+            obj.cost.isTreeSame(obj.Tree);
+            
             for i = size(obj.Tree.E.v):-1:1
                 if obj.cost.g_(obj.Tree.E.v(i,:))+obj.cost.h_(obj.Tree.E.v(i,:)) > c || obj.cost.g_(obj.Tree.E.x(i,:))+obj.cost.h_(obj.Tree.E.x(i,:)) > c
                     del_idx_Tree_E(i) = true;
@@ -107,8 +108,9 @@ classdef BIT_star_rebuild
             obj.Tree.E.v(del_idx_Tree_E,:) = [];
             obj.Tree.E.x(del_idx_Tree_E,:) = [];
             obj.Tree.E.father_i(del_idx_Tree_E) = [];
+            obj.cost.isTreeSame(obj.Tree);
             obj = obj.updateTreeIndices();
-
+            
             for i = size(obj.V_old):-1:1
                 if obj.cost.g_(obj.V_old(i,:))+obj.cost.h_(obj.V_old(i,:)) > c
                     del_idx_V_old(i) = true;
@@ -124,6 +126,7 @@ classdef BIT_star_rebuild
                 end
             end
             obj.Tree.V(del_idx_Tree_V,:) = [];
+            obj.cost.isTreeSame(obj.Tree);
         end
 
         function Samples = Sample(obj, m, c)
@@ -210,17 +213,20 @@ classdef BIT_star_rebuild
                             obj.Tree.E.v(del_index,:) = [];
                             obj.Tree.E.x(del_index,:) = [];
                             obj.Tree.E.father_i(del_index) = [];
+                            obj.cost.isTreeSame(obj.Tree);
                             obj = obj.updateTreeIndices();
                         else
                             % x ∉ V
                             obj.X_samples = obj.X_samples(~ismember(obj.X_samples, x, 'rows'),:);
                             obj.Tree.V = [obj.Tree.V; x];
+                            obj.cost.isTreeSame(obj.Tree);
                             obj.Q.V = [obj.Q.V; x];
                         end
                         obj.Tree.E.v = [obj.Tree.E.v; v];
                         obj.Tree.E.x = [obj.Tree.E.x; x];
                         [~,father_index] = ismember(v, obj.Tree.E.x, 'rows');
                         obj.Tree.E.father_i = [obj.Tree.E.father_i; father_index];
+                        obj.cost.isTreeSame(obj.Tree);
 
                         n = size(obj.Q.E.v, 1);
                         rows_to_remove = false(n, 1); % 初始化一个逻辑数组来标记要移除的行
