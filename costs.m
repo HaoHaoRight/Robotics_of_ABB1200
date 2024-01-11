@@ -19,7 +19,9 @@ classdef costs < handle
             % 构造函数
             obj.start = start;
             obj.goal = goal;
+            obj.Cache = containers.Map('KeyType', 'char', 'ValueType', 'any');
             obj.obstacle = obstacle;
+            obj.Tree_old = 0;
         end
  % c(x,y) | 计算X空间内点x到y的路径长度。如果阻塞则返回无穷大，或者路径不存在。               
         function pathLength = c(obj, x, y)
@@ -46,23 +48,33 @@ classdef costs < handle
             % Tree: 包含节点和边的树结构
             % 检查缓存
 
-            % 将当前节点转换为字符串以用作缓存键
-            % node_key = matlab.lang.makeValidName(num2str(current_node));
-            %
-            % if isequal(obj.Tree_old, Tree) && isfield(obj.Cache, node_key)
-            %     gT = obj.Cache.(node_key);
-            %     return;
-            % end
+ 
             % 检查当前节点是否为空或不在树中
-            % 检查当前节点是否为空或不在树中
+            % 检查 Tree 是否变化
+            if ~isequal(obj.Tree_old, Tree)
+                obj.Cache = containers.Map('KeyType', 'char', 'ValueType', 'any');
+                obj.Tree_old = Tree;
+            end
+
+            % 将当前节点转换为字符串作为缓存的键
+            node_key = sprintf('%.5f_%.5f_%.5f', current_node(1), current_node(2), current_node(3));
+
+            % 检查缓存
+            if isKey(obj.Cache, node_key)
+                gT = obj.Cache(node_key);
+                return;
+            end
+
             if isempty(current_node) || ~any(all(bsxfun(@eq, Tree.V, current_node), 2))
                 gT = inf;
+                obj.Cache(node_key) = gT;
                 return;
             end
 
             % 如果当前节点是根节点
             if isequal(current_node, Tree.V(1,:))
                 gT = 0;
+                obj.Cache(node_key) = gT;
                 return;
             end
 
@@ -77,6 +89,7 @@ classdef costs < handle
                     [~,current_index] = ismember(current_node,Tree.E.x,'rows');
                     if current_index == 0
                         gT = inf;
+                        obj.Cache(node_key) = gT;
                         return;
                     end
                 end
@@ -85,6 +98,7 @@ classdef costs < handle
                 % 如果没有找到父节点（这意味着当前节点不是根节点但也没有父节点）
                 if isempty(father_index) && ~(father_index == 0)
                     gT = inf;
+                    obj.Cache(node_key) = gT;
                     return;
                 end
 
@@ -101,6 +115,7 @@ classdef costs < handle
                 current_index = father_index;
             end
 
+            obj.Cache(node_key) = gT;
             % obj.Cache.(node_key) = gT;
             % obj.Tree_old = Tree;
         end
