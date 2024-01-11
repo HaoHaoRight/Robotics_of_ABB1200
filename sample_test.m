@@ -9,9 +9,20 @@ center = [0.4 0.75 0.45]; % 中心点坐标
 le = 0.1; % 立方体的长度
 width = 0.2;  % 立方体的宽度
 height = 0.1; % 立方体的高度
-obstacle = Obstacle(center, le, width, height);
+obs1 = aObstacle(center, le, width, height);
+
+center = [0.5 0.55 0.45]; % 中心点坐标
+le = 0.3; % 立方体的长度
+width = 0.02;  % 立方体的宽度
+height = 0.05; % 立方体的高度
+obs2 = aObstacle(center, le, width, height);
+
+obstacle = Obstacle;
+obstacle = obstacle.addObstacle(obs1);
+obstacle = obstacle.addObstacle(obs2);
+
 total_time = 0;
-nums = 100;
+nums = 1;
 for i = 1:nums
     tic;
 

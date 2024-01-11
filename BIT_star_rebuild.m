@@ -48,7 +48,7 @@ classdef BIT_star_rebuild
                     obj = Prune(obj, obj.cost.gT(obj.x_goal, obj.Tree));
                     % Prune(gT(x_goal))
                     obj.X_samples = [obj.X_samples; obj.Sample(obj.m, obj.cost.gT(obj.x_goal, obj.Tree))];
-                    %obj.Plot(batch_count);
+                    % obj.Plot(batch_count);
                     batch_count = batch_count + 1;
                     % Sample(m, gT(x_goal))
                     obj.V_old = obj.Tree.V;
@@ -67,7 +67,7 @@ classdef BIT_star_rebuild
                     fprintf('Now cost = %f\n', cost_new);
                     percent_change = abs((obj.cost_old - cost_new) / obj.cost_old)*100;
                     fprintf('Cost Change Rate = %f %%\n', percent_change);
-                    if cost_new < 0.57
+                    if cost_new < 0.53
                     %if percent_change < 0.03  % 阈值
                         path = obj.Path();
                         break
