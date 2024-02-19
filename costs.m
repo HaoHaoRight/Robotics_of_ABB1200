@@ -24,7 +24,7 @@ classdef costs < handle
             obj.obstacle = obstacle;
             obj.Tree_same = 0;
         end
-        function obj = isTreeSame(obj,Tree)
+        function isTreeSame(obj,Tree)
             if ~isequal(obj.Tree_old, Tree)
                 obj.Cache = dictionary(obj.start,0);% 清空字典
                 obj.Tree_same = 0;

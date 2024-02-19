@@ -1,4 +1,4 @@
-classdef BIT_star_rebuild
+ classdef BIT_star_rebuild
     % 定义所有向量为行向量(i,:)
     % Tree = (V, E)
     % Q = (V, E)
@@ -18,6 +18,7 @@ classdef BIT_star_rebuild
         radius;
         cost_old;
         m;
+        volume_Xf;
     end % end properties
     methods
         function obj = BIT_star_rebuild(obstacle, x_root, x_goal, demension, m)
@@ -47,13 +48,14 @@ classdef BIT_star_rebuild
                     % Batch creation
                     obj = Prune(obj, obj.cost.gT(obj.x_goal, obj.Tree));
                     % Prune(gT(x_goal))
-                    obj.X_samples = [obj.X_samples; obj.Sample(obj.m, obj.cost.gT(obj.x_goal, obj.Tree))];
-                    % obj.Plot(batch_count);
+                    [Sample, obj.volume_Xf] = obj.Sample(obj.m, obj.cost.gT(obj.x_goal, obj.Tree));
+                    obj.X_samples = [obj.X_samples; Sample];
+                    obj.Plot(batch_count);
                     batch_count = batch_count + 1;
                     % Sample(m, gT(x_goal))
                     obj.V_old = obj.Tree.V;
                     obj.Q.V = obj.Tree.V;
-                    obj.radius = 0.08;
+                    obj.radius = obj.Radius(size(obj.X_samples), 1.2);
                 end
                 while obj.cost.BestValue(obj.Q,'V',obj.Tree) <= obj.cost.BestValue(obj.Q,'E',obj.Tree) && ~isempty(obj.Q.V)
                     obj = obj.ExpandVertex();
@@ -61,13 +63,17 @@ classdef BIT_star_rebuild
                 if ~isempty(obj.Q.E.v)
                     obj = obj.ExpandEdge();
                 end
-
+                
                 cost_new = obj.cost.gT(obj.x_goal, obj.Tree);
                 if cost_new  < obj.cost_old
+                    %obj = obj.Path_Simplification();
+                    %obj.cost.Cache = dictionary(obj.x_root,0);% 清空字典
+
                     fprintf('Now cost = %f\n', cost_new);
-                    percent_change = abs((obj.cost_old - cost_new) / obj.cost_old)*100;
-                    fprintf('Cost Change Rate = %f %%\n', percent_change);
-                    if cost_new < 0.53
+                    %fprintf('Now cost after simplification= %f\n', obj.cost.gT(obj.x_goal, obj.Tree));
+                    %percent_change = abs((obj.cost_old - cost_new) / obj.cost_old)*100;
+                    %fprintf('Cost Change Rate = %f %%\n', percent_change);
+                    if batch_count >= 1000 ||cost_new < 0.55
                     %if percent_change < 0.03  % 阈值
                         path = obj.Path();
                         break
@@ -81,6 +87,9 @@ classdef BIT_star_rebuild
         function obj = Prune(obj, c)
             % Prune the tree (g_(x)+h_(x) > c)
             % 定义删除索引的数组
+            obj = obj.Path_Simplification();
+            obj.cost.Cache = dictionary(obj.x_root,0);% 清空字典
+            
             del_idx_X_samples = false(size(obj.X_samples, 1), 1);
             del_idx_Tree_V = false(size(obj.Tree.V, 1), 1);
             del_idx_Tree_E = false(size(obj.Tree.E.v, 1), 1);
@@ -129,26 +138,32 @@ classdef BIT_star_rebuild
             obj.cost.isTreeSame(obj.Tree);
         end
 
-        function Samples = Sample(obj, m, c)
+        function [Samples, volume_Xf] = Sample(obj, m, c)
             % 拒绝采样版本
             Samples = zeros(m, obj.demension);
             dem = obj.demension;
             root = obj.x_root;
             goal = obj.x_goal;
             obs = obj.obstacle;
-            % 使用 parfor 生成样本
-            for i = 1:m% parfor
+            valid_samples_count = 0; % 用于计算体积的有效样本数
+
+            % 使用 parfor 生成样本并估算体积
+            for i = 1:m % parfor
                 valid_sample = false;
                 while ~valid_sample
                     rand_point = rand(1, dem); % 生成随机点（n维行向量）
-                    if norm(rand_point-root) + norm(rand_point-goal) <= c && ~obs.isPointInside(rand_point)
+                    if norm(rand_point - root) + norm(rand_point - goal) <= c && ~obs.isPointInside(rand_point)
                         Samples(i, :) = rand_point; % 添加行向量到矩阵
                         valid_sample = true;
+                        valid_samples_count = valid_samples_count + 1; % 增加有效样本计数
                     end
                 end
             end
+
+            % 估算体积
+            volume_Xf = valid_samples_count / m;
         end
-        
+
         function obj = ExpandVertex(obj)
             % [Alg.2]
             % Pop the best vertex from Q.V
@@ -285,47 +300,8 @@ classdef BIT_star_rebuild
         function r = Radius(obj, p, a)
             % Lebesgue measure
             n = obj.demension;
-            set_Lebesgue = obj.estimateVolume(obj.X_samples, 5000);
             ball_Lebesgue = pi^(n/2) / gamma(n/2 + 1);
-            r = 2*a * (1+1/n)^(1/n) * (set_Lebesgue/ball_Lebesgue)^(1/n) * (log(p)/p)^(1/n);
-            % ??????????????????????????????????????????????????????????????????????????????
-        end
-
-        function volume = estimateVolume(obj, pointSet, numSamples)
-            % 蒙特卡洛估算椭圆体积
-            % pointSet m x n 矩阵，每行代表空间中的一个点
-            % spaceBounds 包含空间边界的 n x 2 矩阵，每行为 [min, max] 形式
-            % numSamples 随机点的数量
-            % neighborhoodSize 邻域大小的半径
-
-            neighborhoodSize = obj.radius;
-            spaceBounds = [0,1; 0,1; 0,1];
-            % 获取空间的维度
-            dim = size(pointSet, 2);
-
-            % 生成随机点
-            randomPoints = rand(numSamples, dim);
-            for d = 1:dim
-                Val = spaceBounds(d, :);
-                minVal = Val(1);
-                maxVal = Val(2);
-                randomPoints(:, d) = randomPoints(:, d) * (maxVal - minVal) + minVal;
-            end
-
-            % 判断点是否足够接近点集
-            insideCount = 0;
-            for i = 1:numSamples
-                distances = sqrt(sum((pointSet - randomPoints(i,:)).^2, 2));
-                if any(distances < neighborhoodSize)
-                    insideCount = insideCount + 1;
-                end
-            end
-
-            % 计算空间的总体积
-            totalVolume = prod(diff(spaceBounds, 1, 2));
-
-            % 估算点集所占体积
-            volume = totalVolume * (insideCount / numSamples);
+            r = 2*a * (1+1/n)^(1/n) * (obj.volume_Xf/ball_Lebesgue)^(1/n) * (log(p)/p)^(1/n);
         end
 
         function obj = updateTreeIndices(obj)
@@ -336,6 +312,22 @@ classdef BIT_star_rebuild
                 [~,father_index] = ismember(current, obj.Tree.E.x, 'rows');
                 obj.Tree.E.father_i(i) = father_index;
             end
+        end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        function obj = Path_Simplification(obj)
+            current
+            while current == obj.x_root
+                for j = 1:size(obj.Tree.E.v)
+                    if obj.Tree.E.v(j,:)==obj.x_goal
+                        break
+                    end
+                    if obj.cost.c(obj.Tree.E.v(j,:), current) < inf
+                        obj.Tree.E.v(i,:) = obj.Tree.E.v(j,:);
+                        break;
+                    end
+                end
+            end
+            obj = obj.updateTreeIndices;
         end
 
     end % end methods

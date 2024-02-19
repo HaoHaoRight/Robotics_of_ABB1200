@@ -9,15 +9,39 @@ center = [0.4 0.75 0.45]; % 中心点坐标
 le = 0.1; % 立方体的长度
 width = 0.2;  % 立方体的宽度
 height = 0.1; % 立方体的高度
-obstacle = Obstacle(center, le, width, height);
+obs1 = aObstacle(center, le, width, height);
+
+center = [0.5 0.55 0.45]; % 中心点坐标
+le = 0.3; % 立方体的长度
+width = 0.02;  % 立方体的宽度
+height = 0.05; % 立方体的高度
+obs2 = aObstacle(center, le, width, height);
+
+center = [0.5 0.6 0.55]; % 中心点坐标
+le = 0.3; % 立方体的长度
+width = 0.02;  % 立方体的宽度
+height = 0.08; % 立方体的高度
+obs3 = aObstacle(center, le, width, height);
+
+center = [0.5 0.6 0.35]; % 中心点坐标
+le = 0.3; % 立方体的长度
+width = 0.02;  % 立方体的宽度
+height = 0.08; % 立方体的高度
+obs4 = aObstacle(center, le, width, height);
+
+obstacle = Obstacle;
+obstacle = obstacle.addObstacle(obs1);
+obstacle = obstacle.addObstacle(obs2);
+obstacle = obstacle.addObstacle(obs3);
+obstacle = obstacle.addObstacle(obs4);
+
 total_time = 0;
-nums = 20;
+nums = 1;
 for i = 1:nums
     tic;
 
-    bit = BIT_star_rebuild(obstacle, x_root, x_goal ,3 , 200);
+    bit = BIT_star_rebuild(obstacle, x_root, x_goal ,3 , 1500);
     path = bit.Solution();
-
     elapsed_time = toc;
     total_time = total_time + elapsed_time;
 end
@@ -41,7 +65,7 @@ plot3(x_goal(1), x_goal(2), x_goal(3), 'bo', 'MarkerSize', 10, 'MarkerFaceColor'
 xlabel('X');
 ylabel('Y');
 zlabel('Z');
-title('BIT*');
+title('BIT*');  
 hold off;
 % function X_rand = randSample(x_root, X_goal, c_sol, m, obstacle, dist)
 %     X_rand = []; % 初始化为空矩阵

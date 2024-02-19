@@ -17,23 +17,36 @@ width = 0.02;  % 立方体的宽度
 height = 0.05; % 立方体的高度
 obs2 = aObstacle(center, le, width, height);
 
+center = [0.5 0.6 0.55]; % 中心点坐标
+le = 0.3; % 立方体的长度
+width = 0.02;  % 立方体的宽度
+height = 0.08; % 立方体的高度
+obs3 = aObstacle(center, le, width, height);
+
+center = [0.5 0.6 0.35]; % 中心点坐标
+le = 0.3; % 立方体的长度
+width = 0.02;  % 立方体的宽度
+height = 0.08; % 立方体的高度
+obs4 = aObstacle(center, le, width, height);
+
 obstacle = Obstacle;
 obstacle = obstacle.addObstacle(obs1);
 obstacle = obstacle.addObstacle(obs2);
+obstacle = obstacle.addObstacle(obs3);
+obstacle = obstacle.addObstacle(obs4);
 
 total_time = 0;
 nums = 1;
 for i = 1:nums
     tic;
 
-    bit = BIT_star_rebuild(obstacle, x_root, x_goal ,3 , 2500);
+    bit = BIT_star_rebuild(obstacle, x_root, x_goal ,3 , 1500);
     path = bit.Solution();
-
     elapsed_time = toc;
     total_time = total_time + elapsed_time;
 end
 average_time = total_time / nums;
-disp(['Average Time: ', num2str(average_time), ' seconds']);
+disp(['Average Total Time: ', num2str(average_time), ' seconds']);
 
 figure;
 hold on;
