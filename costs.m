@@ -24,7 +24,7 @@ classdef costs < handle
             obj.obstacle = obstacle;
             obj.Tree_same = 0;
         end
-        function isTreeSame(obj,Tree)
+        function obj = isTreeSame(obj,Tree)
             if ~isequal(obj.Tree_old, Tree)
                 obj.Cache = dictionary(obj.start,0);% 清空字典
                 obj.Tree_same = 0;
@@ -85,7 +85,7 @@ classdef costs < handle
             % 查找当前节点的索引
             [~,current_index] = ismember(current_node,Tree.E.x,'rows');
 
-            while ~isequal(current_node, Tree.V(1,:))
+            while ~isequal(current_node, obj.start)
                 if current_index == 0
                     [~,current_index] = ismember(current_node,Tree.E.x,'rows');
                     if current_index == 0

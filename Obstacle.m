@@ -28,7 +28,7 @@ classdef Obstacle
                 obstacle.plotObstacle();
             end
         end
-
+        
         function intersecting = isVectorIntersectingObstacle(obj, vectorStart, vectorEnd)
             % 判断向量是否与场景中的任何障碍物相交
             %   vectorStart: 向量的起点坐标
@@ -56,7 +56,7 @@ classdef Obstacle
                 end
             end
         end
-
+        
         function plotObstacle(obj)
             for i = 1:numel(obj.obstacles)
                 obstacle = obj.obstacles{i};

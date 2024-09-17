@@ -41,6 +41,7 @@
             obj.m = m;
             obj.cost_old = inf;
         end
+
         function path = Solution(obj)
             batch_count = 1;
             while 1
@@ -50,7 +51,7 @@
                     % Prune(gT(x_goal))
                     [Sample, obj.volume_Xf] = obj.Sample(obj.m, obj.cost.gT(obj.x_goal, obj.Tree));
                     obj.X_samples = [obj.X_samples; Sample];
-                    obj.Plot(batch_count);
+                    % obj.Plot(batch_count);
                     batch_count = batch_count + 1;
                     % Sample(m, gT(x_goal))
                     obj.V_old = obj.Tree.V;
@@ -64,31 +65,37 @@
                     obj = obj.ExpandEdge();
                 end
                 
+                % obj.cost.Cache = dictionary(obj.x_root,0);
                 cost_new = obj.cost.gT(obj.x_goal, obj.Tree);
                 if cost_new  < obj.cost_old
-                    % obj = obj.Path_Simplification();
-                    % obj.cost.Cache = dictionary(obj.x_root,0);% 清空字典
-
+                    
+                    %obj = obj.Path_Simplification();
+                    %obj.cost.Cache = dictionary(obj.x_root,0);% 清空字典
+                    
                     fprintf('Now cost = %f\n', cost_new);
-                    %fprintf('Now cost after simplification= %f\n', obj.cost.gT(obj.x_goal, obj.Tree));
+
                     %percent_change = abs((obj.cost_old - cost_new) / obj.cost_old)*100;
                     %fprintf('Cost Change Rate = %f %%\n', percent_change);
-                    if batch_count >= 1000 ||cost_new < 0.55
+                    if batch_count >= 1000 ||cost_new < 0.75 % 终止条件
                     %if percent_change < 0.03  % 阈值
                         path = obj.Path();
+                        fprintf('cost before simplification = %f\n', obj.calculatePathLength(path));
+                        
+                        path = obj.douglasPeucker(path, 0.01);
+                        fprintf('cost after simplification = %f\n', obj.calculatePathLength(path));
                         break
                     end
                     obj.cost_old = cost_new;
                 end
             end
-
         end
-
+        
         function obj = Prune(obj, c)
             % Prune the tree (g_(x)+h_(x) > c)
             % 定义删除索引的数组
-            obj = obj.Path_Simplification();
             obj.cost.Cache = dictionary(obj.x_root,0);% 清空字典
+            obj = obj.Path_Simplification();
+            %obj.cost.Cache = dictionary(obj.x_root,0);% 清空字典
             
             del_idx_X_samples = false(size(obj.X_samples, 1), 1);
             del_idx_Tree_V = false(size(obj.Tree.V, 1), 1);
@@ -137,7 +144,7 @@
             obj.Tree.V(del_idx_Tree_V,:) = [];
             obj.cost.isTreeSame(obj.Tree);
         end
-
+        
         function [Samples, volume_Xf] = Sample(obj, m, c)
             % 拒绝采样版本
             Samples = zeros(m, obj.demension);
@@ -146,7 +153,7 @@
             goal = obj.x_goal;
             obs = obj.obstacle;
             valid_samples_count = 0; % 用于计算体积的有效样本数
-
+            
             % 使用 parfor 生成样本并估算体积
             for i = 1:m % parfor
                 valid_sample = false;
@@ -159,7 +166,7 @@
                     end
                 end
             end
-
+            
             % 估算体积
             volume_Xf = valid_samples_count / m;
         end
@@ -240,7 +247,7 @@
                         obj.Tree.E.v = [obj.Tree.E.v; v];
                         obj.Tree.E.x = [obj.Tree.E.x; x];
                         [~,father_index] = ismember(v, obj.Tree.E.x, 'rows');
-                        obj.Tree.E.father_i = [obj.Tree.E.father_i; father_index];
+                        obj.Tree.E.father_i(end+1) =  father_index;
                         obj.cost.isTreeSame(obj.Tree);
 
                         n = size(obj.Q.E.v, 1);
@@ -313,27 +320,102 @@
                 obj.Tree.E.father_i(i) = father_index;
             end
         end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function obj = Path_Simplification(obj)
-            if size(obj.Tree.E.x) == 0
+            if isempty(obj.Tree.E.x)
                 return
+            end 
+
+            path = obj.Path();
+            fprintf('cost after simplification = %f\n', obj.calculatePathLength(path));
+            % simplifiedPath = obj.douglasPeucker(path,  0.01);% douglasPeucker
+            simplifiedPath = obj.FSPS(path);% Forward sequential path simplification 
+            fprintf('cost after simplification = %f\n', obj.calculatePathLength(simplifiedPath));
+            obj.Tree.E = struct('v',[],'x',[],'father_i',[]);
+            for i = 1:size(simplifiedPath,1)-1
+                obj.Tree.E.v(i,:) =  simplifiedPath(i,:);
+                obj.Tree.E.x(i,:) =  simplifiedPath(i+1,:);
+                obj.Tree.E.father_i(i) = i-1;
             end
-            [current_index,~] = size(obj.Tree.E.x);
-            while obj.Tree.E.v(current_index, :) ~= obj.x_root
-                for j = 1:size(obj.Tree.E.v)
-                    if j == current_index
-                        current_index = current_index - 1;
-                        break
-                    end
-                    if obj.cost.c(obj.Tree.E.v(j,:), obj.Tree.E.x(current_index, :)) < inf
-                        obj.Tree.E.v(current_index,:) = obj.Tree.E.v(j,:);
-                        current_index = j;
-                        obj.Tree.E.father_i(current_index) = obj.Tree.E.father_i(j);
+        end
+        function simplifiedPath = douglasPeucker(obj, path, epsilon)
+            % 如果路径上的点少于3个，无需简化
+            if size(path, 1) < 3
+                simplifiedPath = path;
+                return;
+            end
+            
+            % 找到距离基准线段最远的点
+            maxDistance = 0;
+            index = 0;
+            for i = 2:size(path, 1) - 1
+                distance = obj.perpDist(path(i, :), path(1, :), path(end, :));
+                if distance > maxDistance
+                    maxDistance = distance;
+                    index = i;
+                end
+            end
+
+            % 如果最大距离小于阈值，检查路径是否与障碍物相交
+            if maxDistance < epsilon
+               if obj.cost.c(path(1, :), path(end, :)) < inf
+                    simplifiedPath = [path(1, :); path(end, :)];
+                else
+                    simplifiedPath = path;
+                end
+            else
+                % 否则，递归地对两部分路径进行简化
+                firstPart = douglasPeucker(obj, path(1:index, :), epsilon);
+                secondPart = douglasPeucker(obj, path(index:end, :), epsilon);
+                simplifiedPath = [firstPart(1:end-1, :); secondPart];
+            end
+        end
+        function distance = perpDist(obj, point, lineStart, lineEnd)
+            % 计算点到线段的垂直距离（三维）
+            lineVec = lineEnd - lineStart;
+            pointVec = point - lineStart;
+            lineLen = norm(lineVec);
+            projLen = dot(pointVec, lineVec) / lineLen;
+            projVec = (projLen / lineLen) * lineVec;
+            perpVec = pointVec - projVec;
+            distance = norm(perpVec);
+        end
+
+        function totalLength = calculatePathLength(obj, points)
+            % 计算路径的总长度
+            % points: 一个N x 3的矩阵，每行代表一个点的x, y, z坐标
+
+            % 计算每两个相邻点之间的距离
+            differences = diff(points, 1, 1); % 计算相邻点之间的差异
+            distances = sqrt(sum(differences.^2, 2)); % 计算每段的欧几里得距离
+
+            % 计算总长度
+            totalLength = sum(distances);
+        end
+
+        function simplified_path = FSPS(obj,original_path)
+            % 初始化简化后的路径
+            simplified_path = original_path(1, :);
+
+            i = 1;
+            while i < size(original_path, 1)
+                % 从当前节点开始，尝试直接连接到后面的节点
+                for j = size(original_path, 1):-1:i+1
+                    if obj.cost.c(original_path(i, :), original_path(j, :)) ~= inf
+                        % 如果两点之间没有障碍物，将终点添加到简化路径中
+                        simplified_path = [simplified_path; original_path(j, :)];
+                        i = j; % 更新当前节点索引
                         break;
                     end
                 end
+                % 如果所有后续节点都无法直接连接，则移动到下一个节点
+                if i < size(original_path, 1) && isequal(simplified_path(end, :), original_path(i, :))
+                    i = i + 1;
+                    simplified_path = [simplified_path; original_path(i, :)];
+                end
             end
         end
-
     end % end methods
 end % end classdef
