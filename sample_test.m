@@ -2,27 +2,69 @@ clc;clear;close all;
 
 % 定义环境参数
 x_root = [0.3 0.9 0.45]; % 起点坐标（列向量）
-x_goal = [0.6 0.5 0.45]; % 目标点坐标（列向量）
+x_goal = [0.5 0.3 0.2]; % 目标点坐标（列向量）
 
-% 定义障碍物
-center = [0.4 0.75 0.45]; % 中心点坐标
-le = 0.1; % 立方体的长度
-width = 0.2;  % 立方体的宽度
-height = 0.1; % 立方体的高度
-obstacle = Obstacle(center, le, width, height);
+%定义障碍物
+center = [0.3 0.75 0.45];%中心点坐标 
+le = 0.2;%立方体的长度
+width = 0.2;%立方体的宽度 
+height = 0.5;% 立方体的高度
+obs1 = aObstacle(center,le, width, height);
+center = [0.5 0.55 0.45];% 中心点坐标
+le = 0.1;% 立方体的长度
+width = 0.1;%立方体的宽度 
+height = 0.4;%立方体的高度
+obs2 = aObstacle(center,le, width, height);
+center = [0.8 0.5 0.4];% 中心点坐标
+le = 0.1;%立方体的长度
+width = 0.2;%立方体的宽度
+height = 0.4;%立方体的高度
+obs3 = aObstacle(center,le, width, height);
+
+center = [0.6 0.3 0.35];% 中心点坐标
+le= 0.1;%立方体的长度
+width = 0.1;% 立方体的宽度 
+height = 0.4;%立方体的高度
+obs4 = aObstacle(center,le, width, height);
+
+center = [0.3 0.3 0.35];% 中心点坐标
+le= 0.2;%立方体的长度
+width = 0.1;% 立方体的宽度 
+height = 0.4;%立方体的高度
+obs5 = aObstacle(center,le, width, height);
+
+center = [0.8 0.8 0.35];% 中心点坐标
+le= 0.2;%立方体的长度
+width = 0.2;% 立方体的宽度 
+height = 0.4;%立方体的高度
+obs6 = aObstacle(center,le, width, height);
+
+center = [0.2 0.55 0.35];% 中心点坐标
+le= 0.05;%立方体的长度
+width = 0.05;% 立方体的宽度 
+height = 0.4;%立方体的高度
+obs6 = aObstacle(center,le, width, height);
+
+obstacle = Obstacle;
+obstacle = obstacle.addObstacle(obs1); 
+obstacle = obstacle.addObstacle(obs2); 
+obstacle = obstacle.addObstacle(obs3); 
+obstacle = obstacle.addObstacle(obs4);
+obstacle = obstacle.addObstacle(obs5);
+obstacle = obstacle.addObstacle(obs6);
+
 total_time = 0;
-nums = 100;
+nums = 1;
 for i = 1:nums
     tic;
 
-    bit = BIT_star_rebuild(obstacle, x_root, x_goal ,3 , 2500);
+    bit = BIT_star_rebuild(obstacle, x_root, x_goal ,3 , 1500);
     path = bit.Solution();
-
     elapsed_time = toc;
     total_time = total_time + elapsed_time;
 end
 average_time = total_time / nums;
-disp(['Average Time: ', num2str(average_time), ' seconds']);
+disp(['Average Total Time: ', num2str(average_time), ' seconds']);
 
 figure;
 hold on;
